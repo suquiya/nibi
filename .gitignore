@@ -1,17 +1,2 @@
-<<<<<<< HEAD
 /target
 **/*.rs.bk
-=======
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Test binary, build with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
->>>>>>> 22dac11937b9f3ce5470e893c2ba050d70f4618d
