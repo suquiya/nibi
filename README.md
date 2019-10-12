@@ -23,4 +23,8 @@ I am planning to coding Nibi, so I create this repository.....
 - src: 元となるコード
 - dest: 生成されたサイトのファイル
 - assets: 画像ファイルなど
-- RON ファイルで設定可能
+- RON(Rust Object Notation)ファイルで設定可能
+
+## 予定
+
+できるところから実装していきます。
