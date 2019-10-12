@@ -18,12 +18,13 @@ I am planning to coding Nibi, so I create this repository.....
 - RON ファイルによる設定
 - ショートコード
 
-## サイトジェネレータのフォルダ構成について(予定)
+## サイトジェネレータのフォルダやファイルの場所について(予定)
 
 - src: 元となるコード
 - dest: 生成されたサイトのファイル
 - assets: 画像ファイルなど
 - RON(Rust Object Notation)ファイルで設定可能
+  - ディレクトリ構成は設定ファイルで変更可能
 
 ## 予定
 
