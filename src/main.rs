@@ -27,7 +27,7 @@ fn main() {
             .arg(Arg::with_name("projectName")
             .help("directory name for new project.")));
     let matches = app.get_matches();
-    if let Some(td) = matches.value_of("target") {
-        println!("td: {}", td);
+    if let Some(target) = matches.value_of("target") {
+        println!("target: {}", target);
     }
 }
