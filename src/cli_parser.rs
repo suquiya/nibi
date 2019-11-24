@@ -1,6 +1,6 @@
 use clap::{Arg, SubCommand};
 
-fn def_parser<'a, 'b>() -> clap::App<'a, 'b> {
+pub fn default<'a, 'b>() -> clap::App<'a, 'b> {
     return app_from_crate!()
         .arg(
             Arg::with_name("buildTarget")
@@ -39,20 +39,4 @@ fn def_parser<'a, 'b>() -> clap::App<'a, 'b> {
             .about("list what are specidied by option. without the specification, this list project list.")
             .arg(Arg::with_name("type").help("type that is specified."))
         );
-}
-
-pub fn execute() {
-    let cli_parser = def_parser();
-    let matches = cli_parser.get_matches();
-    if let Some(t) = matches.value_of("buildTarget") {
-        println!("target: {}", t);
-    }
-
-    let (sub, _) = matches.subcommand();
-    println!("subcommand: {}", sub);
-    match matches.subcommand() {
-        ("init", Some(_)) => {}
-        ("new", Some(_)) => {}
-        (_, _) => {}
-    }
 }

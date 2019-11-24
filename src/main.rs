@@ -4,12 +4,9 @@
 //All rights reserved.
 //
 //please read LICENSE and README.md
-
-#[macro_use]
-extern crate clap;
-
-mod cmd_app;
+use nibi::cli_parser::default;
+use nibi::cmd;
 
 fn main() {
-    cmd_app::execute();
+    cmd::exec_from_cli(default());
 }
