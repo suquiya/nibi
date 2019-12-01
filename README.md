@@ -12,16 +12,16 @@ I am planning to coding Nibi, so I create this repository.....
 
 計画もかねた Nibi の機能（予定）一覧
 
-- プラグイン機構
 - Markdown サポート
-- WordPress からデータをインポート可能（別のソフトにするかも）
+- WordPress からデータをインポート可能（この部分は分離するか、別の既存ソフトにするかも）
 - RON ファイルによる設定
 - ショートコード
+- プラグイン機構
 
 ## サイトジェネレータのフォルダやファイルの場所について(予定)
 
-- src: 元となるコード
-- dest: 生成されたサイトのファイル
+- ingot: 元となるコード
+- alloy: 生成されたサイトのファイル
 - assets: 画像ファイルなど
 - RON(Rust Object Notation)ファイルで設定可能
   - ディレクトリ構成は設定ファイルで変更可能
