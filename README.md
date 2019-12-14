@@ -20,9 +20,9 @@ I am planning to coding Nibi, so I create this repository.....
 
 ## サイトジェネレータのフォルダやファイルの場所について(予定)
 
-- ingot: 元となるコード
-- alloy: 生成されたサイトのファイル
-- assets: 画像ファイルなど
+- ingots: 元となる Markdown 等を入れるところ
+- products: 生成されたサイトのファイル
+- resources: 画像ファイルなど
 - RON(Rust Object Notation)ファイルで設定可能
   - ディレクトリ構成は設定ファイルで変更可能
 
