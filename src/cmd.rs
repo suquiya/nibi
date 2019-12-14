@@ -35,7 +35,7 @@ pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
 
 fn init(target: &str) {
     println!("{}", target);
-    config::config_exists_in(target);
+    config::exists_in(target);
 }
 
 fn new_proj(project_name: &str) {
