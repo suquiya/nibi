@@ -16,19 +16,19 @@ pub fn nibi_basic<'a, 'b>() -> clap::App<'a, 'b> {
         )
         .subcommand(
             SubCommand::with_name("new")
+                .about("create a new nibi object. Out of nibi workbench, create  a new workbench named <objectName>.")
                 .subcommand(SubCommand::with_name("post"))
-                .subcommand(SubCommand::with_name("proj")
-                    .about("create new nibi object. Out of nibi project, create project named <projectName>.")
-                    .arg(Arg::with_name("projectName").help("project name"))
+                .subcommand(SubCommand::with_name("workbench")
+                    .arg(Arg::with_name("workbhenchName").help("workbench name"))
                 )
                 .subcommand(SubCommand::with_name("theme")),
         )
         .subcommand(
             SubCommand::with_name("create")
-                .about("create new nibi object.Out of nibi project, create project named <objectName>. In nibi project, create post named <objectname>.")
+                .about("create a new nibi object. Out of nibi workbrnch, create a new workbench named <objectName>")    
                 .arg(Arg::with_name("objectName").help("object name"))
                 .subcommand(SubCommand::with_name("newpost"))
-                .subcommand(SubCommand::with_name("newproj"))
+                .subcommand(SubCommand::with_name("newworkbench"))
                 .subcommand(SubCommand::with_name("newtheme")),
         )
         .subcommand(
