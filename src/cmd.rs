@@ -1,4 +1,7 @@
 use super::app::config;
+use super::cli;
+use std::io::ErrorKind::AlreadyExists;
+use std::path::Path;
 
 pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
     let matches = cli.get_matches();
@@ -21,7 +24,7 @@ pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
         }
         ("new", Some(sub_matches)) => match sub_matches.subcommand() {
             ("post", Some(_)) => {}
-            ("proj", Some(args_matches)) => {
+            ("workbench", Some(args_matches)) => {
                 if let Some(project_name) = args_matches.value_of("project_name") {
                     new_proj(project_name)
                 }
@@ -33,9 +36,42 @@ pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
     }
 }
 
-fn init(target: &str) {
-    println!("{}", target);
-    config::create_config_file(target);
+fn init(target_dir_path: &str) {
+    println!("{}", target_dir_path);
+    let config_path = config::get_config_path(Path::new(target_dir_path), "ron");
+    match config::create_config_file(&config_path) {
+        Ok(_) => {
+            println!("{} をworkbenchとして初期化しました。", target_dir_path);
+        }
+        Err(err) => {
+            println!("エラー: {}", err);
+            if err.kind() == AlreadyExists {
+                println!("configファイルが既に存在します");
+                match cli::prompt_yes_or_no("上書きしますか？", -1) {
+                    Some(true) => {
+                        match config::overwrite_config_file(&config_path) {
+                            Ok(_) => {
+                                println!("configファイルを上書きしました");
+                                println!(
+                                    "{} をworkbenchフォルダとして初期化しました",
+                                    target_dir_path
+                                )
+                            }
+                            Err(err) => {
+                                println!(
+                                    "エラーが発生しました: {}\r\n処理を中断し、プログラムを終了します。",err
+                                );
+                            }
+                        };
+                    }
+                    Some(false) => {
+                        println!("上書きしません。init処理を中断します。");
+                    }
+                    None => println!("上書きしません。init処理を中断して終了します。"),
+                }
+            }
+        }
+    };
 }
 
 fn new_proj(project_name: &str) {
