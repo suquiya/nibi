@@ -38,6 +38,7 @@ pub fn nibi_basic_parser<'a, 'b>() -> clap::App<'a, 'b> {
                 .about("init target directory for nibi")
                 .arg(Arg::with_name("initTarget").help("directory name for new project.").default_value("."))
                 .arg(arg_config)
+                .arg(Arg::with_name("force").help("force init flag").short("f").long("force"))
         )
         .subcommand(
             SubCommand::with_name("list")
