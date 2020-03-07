@@ -3,7 +3,8 @@ name = "nibi"
 version = "0.0.1"
 authors = ["suquiya <22910980+suquiya@users.noreply.github.com>"]
 edition = "2018"
-description = "Nibi is a static site generator."
+description = "Nibi is a static site generator. (WIP, implementing)"
+license="BSD-3-Clause"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
