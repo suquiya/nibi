@@ -1,9 +1,4 @@
-use super::app::config;
-use super::cli;
-use std::io::ErrorKind::AlreadyExists;
-use std::path::Path;
-
-pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
+/*pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
     let matches = cli.get_matches();
     if let Some(t) = matches.value_of("buildTarget") {
         println!("target: {}", t);
@@ -32,6 +27,9 @@ pub fn exec_from_cli<'a, 'b>(cli: clap::App<'a, 'b>) {
             ("theme", Some(_)) => {}
             (_, _) => {}
         },
+        ("test", Some(sub_matches)) => {
+            println!("{:?}", sub_matches);
+        }
         (_, _) => {}
     }
 }
@@ -76,4 +74,4 @@ fn init(target_dir_path: &str) {
 
 fn new_proj(project_name: &str) {
     println!("{}", project_name);
-}
+}*/

@@ -5,8 +5,7 @@
 //
 //please read LICENSE and README.md
 use nibi::cli;
-use nibi::cmd;
 
 fn main() {
-    cmd::exec_from_cli(cli::nibi_basic_parser());
+	let _: Result<combu::ActionResult, combu::ActionError> = cli::new().run_with_auto_arg_collect();
 }
