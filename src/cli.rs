@@ -1,60 +1,11 @@
-use combu::{
-	action_result, checks, command::presets::func::help_tablize_with_alias_dedup, copyright,
-	crate_authors, crate_license, crate_version, done, flags, license, preset_help_command, vector,
-	Command, Context, Flag,
-};
+use combu::action_result;
 use std::io;
+
+use crate::cmd;
 
 /// Execute Program
 pub fn run() -> action_result!() {
-	return nibi_cmd().run_with_auto_arg_collect();
-}
-
-fn nibi_cmd() -> Command {
-	Command::with_all_field(
-		"nibi".to_owned(),
-		Some(nibi_root_action),
-		crate_authors!().to_owned(),
-		copyright!(2022, suquiya),
-		license!(crate_license!().to_owned(),file_path=>"../LICENSE"),
-		Some(crate_authors!().to_owned()),
-		"nibi [subcommand] [options]".to_owned(),
-		flags!(),
-		flags!(help, version, license, authors, copyright),
-		vector![],
-		crate_version!().to_owned(),
-		vector![
-			preset_help_command!(help_tablize_with_alias_dedup),
-			init_command()
-		],
-	)
-}
-
-fn init_command() -> Command {
-	Command::with_all_field(
-		"init".to_owned(),
-		Some(init_action),
-		String::default(),
-		String::default(),
-		license![],
-		None,
-		"nibi init [directory path: default is current]".to_owned(),
-		flags![yes, no],
-		flags![],
-		vector![],
-		String::default(),
-		vector![],
-	)
-}
-
-fn nibi_root_action(cmd: Command, ctx: Context) -> action_result!() {
-	checks!(cmd, ctx, [error, help, version, license]);
-	done!()
-}
-
-fn init_action(cmd: Command, ctx: Context) -> action_result!() {
-	checks!(cmd, ctx, [error, help, version, license]);
-	done!()
+	return cmd::root().run_with_auto_arg_collect();
 }
 
 /// get string from stdin. refs: https://github.com/conradkleinespel/rprompt/blob/master/src/lib.rs
