@@ -7,5 +7,5 @@
 use nibi::cli;
 
 fn main() {
-	let _: Result<combu::ActionResult, combu::ActionError> = cli::new().run_with_auto_arg_collect();
+	let _: Result<combu::ActionResult, combu::ActionError> = cli::run();
 }
