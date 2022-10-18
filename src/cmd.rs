@@ -1,12 +1,13 @@
 use combu::{
-	action_result, checks, command::presets::func::help_tablize_with_alias_dedup, copyright,
-	crate_authors, crate_license, crate_version, done, flags, license, preset_help_command, vector,
-	Command, Context, Flag,
+	action_result, checks, copyright, crate_authors, crate_license, crate_version, done, flags,
+	license, vector, Command, Context, Flag,
 };
+use common::sub_help;
 
+mod common;
 pub mod init;
 
-pub fn root() -> Command {
+pub fn treed_cmd() -> Command {
 	Command::with_all_field(
 		"nibi".to_owned(),
 		Some(root_action),
@@ -19,10 +20,7 @@ pub fn root() -> Command {
 		flags!(help, version, license, authors, copyright),
 		vector![],
 		crate_version!().to_owned(),
-		vector![
-			preset_help_command!(help_tablize_with_alias_dedup),
-			init::cmd(),
-		],
+		vector![sub_help(), init::cmd(),],
 	)
 }
 

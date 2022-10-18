@@ -5,7 +5,9 @@ use combu::{
 use std::io::ErrorKind::AlreadyExists;
 use std::path::Path;
 
-use crate::{app::config, cli};
+use crate::{app::config, cmd::common::overwrite_confirm};
+
+use super::common::{get_flagged_yes_no, sub_help};
 
 pub fn cmd() -> Command {
 	return Command::with_all_field(
@@ -20,41 +22,43 @@ pub fn cmd() -> Command {
 		flags![],
 		vector![],
 		String::default(),
-		vector![],
+		vector![sub_help()],
 	);
 }
 
 fn route(cmd: Command, ctx: Context) -> action_result!() {
 	checks!(cmd, ctx, [error, help, version, license]);
-	done!()
+	init_action(cmd, ctx)
 }
-
-pub fn init_action(cmd: Command, ctx: Context) {
+pub fn init_action(cmd: Command, ctx: Context) -> action_result!() {
 	let bundle = Bundle::new(ctx, cmd);
 
 	let dir_path = match bundle.args().front() {
 		Some(path) => path,
 		None => ".",
 	};
-	dir_init(dir_path)
+	let yes_no = get_flagged_yes_no(&bundle);
+	dir_init(dir_path, yes_no);
+	done!()
 }
 
-fn dir_init(dir_path: &str) {
+fn dir_init(dir_path: &str, yes_no: Option<bool>) {
 	let config_path = config::get_config_path(Path::new(dir_path), "ron");
+
 	match config::create_config_file(&config_path) {
 		Ok(_) => {
-			println!("{} をworkbenchとして初期化しました。", dir_path);
+			println!("configファイルを作成しました: {}", config_path.display());
 		}
 		Err(err) => {
 			println!("エラー: {}", err);
 			if err.kind() == AlreadyExists {
 				println!("configファイルが既に存在します");
-				match cli::prompt::yes_or_no("上書きしますか？", -1) {
+				let yes_no = overwrite_confirm(yes_no);
+				match yes_no {
 					Some(true) => {
 						match config::overwrite_config_file(&config_path) {
 							Ok(_) => {
 								println!("configファイルを上書きしました");
-								println!("{} をworkbenchフォルダとして初期化しました", dir_path)
 							}
 							Err(err) => {
 								println!(
