@@ -2,10 +2,14 @@ use combu::{
 	action::bundle::Bundle, action_result, checks, done, flags, license, vector, Command, Context,
 	Flag,
 };
-use std::io::ErrorKind::AlreadyExists;
 use std::path::Path;
+use std::{fs, io::ErrorKind::AlreadyExists};
 
-use crate::{app::config, cmd::common::overwrite_confirm};
+use crate::cmd::common::get_yes_no;
+use crate::{
+	app::config::{self, Config},
+	cmd::common::overwrite_confirm,
+};
 
 use super::common::{get_flagged_yes_no, sub_help};
 
@@ -26,53 +30,105 @@ pub fn cmd() -> Command {
 	);
 }
 
-fn route(cmd: Command, ctx: Context) -> action_result!() {
+pub fn route(cmd: Command, ctx: Context) -> action_result!() {
 	checks!(cmd, ctx, [error, help, version, license]);
 	init_action(cmd, ctx)
 }
+
 pub fn init_action(cmd: Command, ctx: Context) -> action_result!() {
 	let bundle = Bundle::new(ctx, cmd);
-
 	let dir_path = match bundle.args().front() {
 		Some(path) => path,
 		None => ".",
 	};
 	let yes_no = get_flagged_yes_no(&bundle);
-	dir_init(dir_path, yes_no);
+	init(dir_path, yes_no);
 	done!()
 }
 
-fn dir_init(dir_path: &str, yes_no: Option<bool>) {
-	let config_path = config::get_config_path(Path::new(dir_path), "ron");
+fn init(dir_path: &str, yes_no: Option<bool>) {
+	let dir_path = Path::new(dir_path);
 
-	match config::create_config_file(&config_path) {
+	// init先フォルダの状態確認となければ作成
+	if !create_root_dir(dir_path, yes_no) {
+		println!("処理を中断し、プログラムを終了します");
+		return;
+	}
+	// TODO: コンフィグ作成問答の実装
+	let config = create_config();
+	let success = create_config_file(dir_path, &config, yes_no);
+	if !success {
+		return;
+	}
+}
+
+fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
+	match fs::create_dir_all(dir_path) {
 		Ok(_) => {
-			println!("configファイルを作成しました: {}", config_path.display());
+			println!(
+				"プロジェクトフォルダ: {}を作成しました。",
+				dir_path.display()
+			);
+			true
 		}
-		Err(err) => {
-			println!("エラー: {}", err);
+		Err(mut err) => {
 			if err.kind() == AlreadyExists {
-				println!("configファイルが既に存在します");
-				let yes_no = overwrite_confirm(yes_no);
-				match yes_no {
-					Some(true) => {
-						match config::overwrite_config_file(&config_path) {
-							Ok(_) => {
-								println!("configファイルを上書きしました");
-							}
-							Err(err) => {
-								println!(
-									"エラーが発生しました: {}\r\n処理を中断し、プログラムを終了します。",
-									err
-								);
-							}
+				// プロジェクトフォルダが存在する場合
+				match dir_path.read_dir() {
+					Ok(mut i) => {
+						return if i.next().is_none() {
+							true
+						} else {
+							println!("指定されたディレクトリは空ではありません");
+							get_yes_no(
+								yes_no,
+								"このまま指定されたディレクトリを使用して初期化しますか？",
+							)
+							.unwrap_or(false)
 						};
 					}
-					Some(false) => {
-						println!("上書きしません。init処理を中断します。");
-					}
-					None => println!("上書きしません。init処理を中断して終了します。"),
+					Err(e) => err = e,
 				}
+			}
+			println!("指定されたパスでエラーが発生しました:{}", err);
+			return false;
+		}
+	}
+}
+
+fn create_config() -> Config {
+	Config::default()
+}
+
+fn create_config_file(dir_path: &Path, config: &Config, yes_no: Option<bool>) -> bool {
+	let config_path = config::get_config_path(dir_path, "ron");
+	match config::create_config_file(&config_path, config) {
+		Ok(_) => {
+			println!("configファイルを作成しました: {}", config_path.display());
+			true
+		}
+		Err(err) => {
+			if err.kind() == AlreadyExists {
+				let yes_no = overwrite_confirm(yes_no);
+				match yes_no {
+					Some(true) => match config::reset_config_file(&config_path, config) {
+						Err(err) => {
+							println!(
+									"コンフィグの初期化処理に失敗しました: {}\r\n処理を中断し、プログラムを終了します。",
+									err
+								);
+							false
+						}
+						_ => true,
+					},
+					_ => {
+						println!("上書きしません。init処理を中断してプログラムを終了します。");
+						false
+					}
+				}
+			} else {
+				println!("コンフィグファイルの作成中にエラーが発生しました: {}\r\ninit処理を中断してプログラムを終了します。", err);
+				false
 			}
 		}
 	}

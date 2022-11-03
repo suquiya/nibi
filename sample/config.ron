@@ -1,1 +1,10 @@
-test
+Config(
+    project_name: "nibi_project",
+    site_title: "site_title",
+    dir_conf: DirConf(
+        opus_imono: "./opus_prod",
+        metals: "./metals",
+        igata: "./igata",
+        gears: "./gears",
+    ),
+)

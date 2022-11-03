@@ -1,53 +1,103 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Error as IOError;
+use std::io::Result as IOResult;
 use std::path::{Path, PathBuf};
 
+use ron::error::SpannedResult;
+use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 
-use super::fsio::{new_empty_file, open_file_with_overwrite_mode, write_str};
+use super::fsio::{new_empty_file, open_file_with_overwrite_mode, write_string};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
 	project_name: String,
-	site_title: String,
+	site_name: String,
 	dir_conf: DirConf,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DirConf {
-	opus_mold: PathBuf,
-	ingots: PathBuf,
-	igata: PathBuf,
-	gears: PathBuf,
-}
-
-impl Default for DirConf {
-	fn default() -> Self {
-		Self {
-			opus_mold: PathBuf::default(),
-			ingots: PathBuf::default(),
-			igata: PathBuf::default(),
-			gears: PathBuf::default(),
-		}
-	}
 }
 
 impl Default for Config {
 	fn default() -> Self {
 		Self {
 			project_name: String::from("nibi_project"),
-			site_title: String::from("site_title"),
+			site_name: String::from("site_title"),
 			dir_conf: DirConf::default(),
 		}
 	}
 }
 
 impl Config {
-	pub fn new(project_name: String, site_title: String) -> Self {
+	pub fn new(project_name: String, site_name: String) -> Self {
 		Self {
 			project_name,
-			site_title,
+			site_name,
 			dir_conf: DirConf::default(),
+		}
+	}
+
+	pub fn project_name<T: Into<String>>(mut self, proj_name: T) -> Self {
+		self.project_name = proj_name.into();
+		self
+	}
+
+	pub fn site_title<T: Into<String>>(mut self, site_name: T) -> Self {
+		self.site_name = site_name.into();
+		self
+	}
+
+	pub fn to_ron(&self, pretty_config: Option<PrettyConfig>) -> String {
+		let pretty_config =
+			pretty_config.unwrap_or(PrettyConfig::new().depth_limit(3).struct_names(true));
+		match ron::ser::to_string_pretty(self, pretty_config) {
+			Err(err) => {
+				println!("{}", err);
+				// デフォルト値の出力失敗は想定外のため
+				panic!()
+			}
+			Ok(ron_string) => ron_string,
+		}
+	}
+
+	pub fn from_ron(ron_str: &str) -> SpannedResult<Self> {
+		ron::from_str(ron_str)
+	}
+
+	pub fn from_ron_file(file: File) -> SpannedResult<Config> {
+		ron::de::from_reader(file)
+	}
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DirConf {
+	site: PathBuf,   // 出力先
+	metals: PathBuf, // 金属会
+	igata: PathBuf,  // 鋳型
+	gears: PathBuf,  //アドオン設定置き予定
+}
+
+impl DirConf {
+	pub fn create_src_dirs(&self) -> Result<(), Vec<(IOError, &PathBuf)>> {
+		let mut errs = vec![];
+		for path in [&self.metals, &self.igata, &self.gears] {
+			if let Err(e) = fs::create_dir(path) {
+				errs.push((e, path));
+			}
+		}
+		if errs.is_empty() {
+			Ok(())
+		} else {
+			Err(errs)
+		}
+	}
+}
+
+impl Default for DirConf {
+	fn default() -> Self {
+		Self {
+			site: PathBuf::from(String::from("site")),
+			metals: PathBuf::from(String::from("metals")),
+			igata: PathBuf::from(String::from("igata")),
+			gears: PathBuf::from(String::from("gears")),
 		}
 	}
 }
@@ -59,11 +109,11 @@ pub fn get_config_path(dir_path: &Path, ext: &str) -> PathBuf {
 	return target;
 }
 
-pub fn create_config_file(config_path: &Path) -> Result<File, IOError> {
+pub fn create_config_file(config_path: &Path, config: &Config) -> Result<File, IOError> {
 	match new_empty_file(config_path) {
 		Ok(target_file) => {
-			let message = "test";
-			write_str(target_file, message)
+			let serialized_config = config.to_ron(None);
+			write_string(target_file, serialized_config)
 		}
 		err => {
 			return err;
@@ -71,26 +121,11 @@ pub fn create_config_file(config_path: &Path) -> Result<File, IOError> {
 	}
 }
 
-pub fn overwrite_config_file(config_path: &Path) -> Result<File, IOError> {
+pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IOError> {
 	match open_file_with_overwrite_mode(config_path) {
 		Ok(target_file) => {
-			let config = Config::default();
-			match ron::to_string(&config) {
-				Err(err) => {
-					println!("{}", err);
-					panic!()
-				}
-				Ok(serialized_config) => match write_str(target_file, &serialized_config) {
-					Err(err) => {
-						println!("{}", err);
-						return Err(err);
-					}
-					ok => {
-						println!("configファイルを上書きしました");
-						return ok;
-					}
-				},
-			}
+			let serialized_config = config.to_ron(None);
+			write_string(target_file, serialized_config)
 		}
 		err => {
 			return err;
