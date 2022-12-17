@@ -1,10 +1,10 @@
 Config(
     project_name: "nibi_project",
-    site_title: "site_title",
+    site_name: "site_title",
     dir_conf: DirConf(
-        opus_imono: "./opus_prod",
-        metals: "./metals",
-        igata: "./igata",
-        gears: "./gears",
+        site: "site",
+        metals: "metals",
+        igata: "igata",
+        gears: "gears",
     ),
 )

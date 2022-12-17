@@ -51,19 +51,24 @@ fn init(dir_path: &str, yes_no: Option<bool>) {
 
 	// init先フォルダの状態確認となければ作成
 	if !create_root_dir(dir_path, yes_no) {
-		println!("処理を中断し、プログラムを終了します");
+		print_early_exit_message();
 		return;
 	}
-	// TODO: コンフィグ作成問答の実装
+
 	let config = create_config();
-	let success = create_config_file(dir_path, &config, yes_no);
-	if !success {
+	if !create_config_file(dir_path, &config, yes_no) {
+		print_early_exit_message();
+		return;
+	}
+
+	if !create_src_dirs(&config, dir_path) {
+		print_early_exit_message();
 		return;
 	}
 }
 
 fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
-	match fs::create_dir_all(dir_path) {
+	match fs::create_dir(dir_path) {
 		Ok(_) => {
 			println!(
 				"プロジェクトフォルダ: {}を作成しました。",
@@ -77,6 +82,7 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 				match dir_path.read_dir() {
 					Ok(mut i) => {
 						return if i.next().is_none() {
+							// フォルダが空の場合
 							true
 						} else {
 							println!("指定されたディレクトリは空ではありません");
@@ -89,6 +95,18 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 					}
 					Err(e) => err = e,
 				}
+			} else {
+				// 他のエラーなら再作成してみてエラーハンドリング
+				match fs::create_dir_all(dir_path) {
+					Ok(_) => {
+						println!(
+							"プロジェクトフォルダ: {}を作成しました。",
+							dir_path.display()
+						);
+						return true;
+					}
+					Err(e) => err = e,
+				}
 			}
 			println!("指定されたパスでエラーが発生しました:{}", err);
 			return false;
@@ -97,6 +115,7 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 }
 
 fn create_config() -> Config {
+	// TODO: コンフィグ作成問答の実装
 	Config::default()
 }
 
@@ -113,23 +132,40 @@ fn create_config_file(dir_path: &Path, config: &Config, yes_no: Option<bool>) ->
 				match yes_no {
 					Some(true) => match config::reset_config_file(&config_path, config) {
 						Err(err) => {
-							println!(
-									"コンフィグの初期化処理に失敗しました: {}\r\n処理を中断し、プログラムを終了します。",
-									err
-								);
+							println!("コンフィグの初期化処理に失敗しました: {}", err);
 							false
 						}
 						_ => true,
 					},
 					_ => {
-						println!("上書きしません。init処理を中断してプログラムを終了します。");
+						println!("上書きしません。");
 						false
 					}
 				}
 			} else {
-				println!("コンフィグファイルの作成中にエラーが発生しました: {}\r\ninit処理を中断してプログラムを終了します。", err);
+				println!("コンフィグファイルの作成中にエラーが発生しました: {}", err);
 				false
 			}
 		}
 	}
+}
+
+fn create_src_dirs(config: &Config, root_dir: &Path) -> bool {
+	match config.get_dir_conf().create_src_dirs(root_dir) {
+		Err(errs) => {
+			for e in errs {
+				println!(
+					"ディレクトリ {} の作成中にエラーが発生しました: {}",
+					e.1.display(),
+					e.0
+				);
+			}
+			false
+		}
+		_ => true,
+	}
+}
+
+fn print_early_exit_message() {
+	println!("init処理を中断し、プログラムを終了します。");
 }

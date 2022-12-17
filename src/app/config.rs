@@ -1,6 +1,5 @@
 use std::fs::{self, File};
 use std::io::Error as IOError;
-use std::io::Result as IOResult;
 use std::path::{Path, PathBuf};
 
 use ron::error::SpannedResult;
@@ -65,6 +64,10 @@ impl Config {
 	pub fn from_ron_file(file: File) -> SpannedResult<Config> {
 		ron::de::from_reader(file)
 	}
+
+	pub fn get_dir_conf(&self) -> &DirConf {
+		&self.dir_conf
+	}
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -76,10 +79,10 @@ pub struct DirConf {
 }
 
 impl DirConf {
-	pub fn create_src_dirs(&self) -> Result<(), Vec<(IOError, &PathBuf)>> {
+	pub fn create_src_dirs(&self, parent_path: &Path) -> Result<(), Vec<(IOError, &PathBuf)>> {
 		let mut errs = vec![];
 		for path in [&self.metals, &self.igata, &self.gears] {
-			if let Err(e) = fs::create_dir(path) {
+			if let Err(e) = fs::create_dir(parent_path.join(path)) {
 				errs.push((e, path));
 			}
 		}
