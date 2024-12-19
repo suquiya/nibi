@@ -73,7 +73,7 @@ impl Config {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DirConf {
 	site: PathBuf,   // 出力先
-	metals: PathBuf, // 金属会
+	metals: PathBuf, // 金属塊
 	igata: PathBuf,  // 鋳型
 	gears: PathBuf,  //アドオン設定置き予定
 }
