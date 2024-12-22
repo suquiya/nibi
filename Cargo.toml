@@ -13,5 +13,5 @@ repository = "https://github.com/suquiya/nibi"
 serde = { version = "1.0.216", features = ["derive"] }
 ron = "0.8.1"
 pulldown-cmark = "0.12.2"
-combu = "1.1.23"
+combu = { version = "1.2.0", features = ["vector_serde"] }
 time = { version = "0.3.37", features = ["macros", "serde"] }

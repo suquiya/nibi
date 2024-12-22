@@ -19,9 +19,12 @@ dependencies = [
 
 [[package]]
 name = "combu"
-version = "1.1.23"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08484b7dfc0eae0598456883b20bbdbaf945348ac5123f9c0e1e65c9a7a8c0cc"
+checksum = "4f2578a28fd2a992013cebf38e5b7b6b80d25701237accf2b3eddf6910248ab0"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "deranged"
