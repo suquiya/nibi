@@ -10,3 +10,15 @@ pub struct Tag {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub ex: Option<BTreeMap<String, String>>,
 }
+
+impl Tag {
+	pub fn new(id: usize, path_name: String, name: String, description: String) -> Self {
+		Self {
+			id,
+			path_name,
+			name,
+			description,
+			ex: None,
+		}
+	}
+}
