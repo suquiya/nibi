@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use combu::Vector;
-use ron::de;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -73,20 +72,27 @@ impl Category {
 			}
 			Some(_) => match &mut self.children {
 				Vector(Some(children)) => {
-					let mut des = descendant;
-					for child in children.iter_mut() {
-						match child.insert_descendant_if_match(des) {
-							Some(r) => {
-								des = r;
-							}
-							None => return None,
-						}
-					}
-					Some(des)
+					return insert_descendant_to_category_list(children, descendant)
 				}
 				Vector(None) => Some(descendant),
 			},
 			None => Some(descendant),
 		}
 	}
+}
+
+pub fn insert_descendant_to_category_list(
+	list: &mut Vec<Category>,
+	descendant: Category,
+) -> Option<Category> {
+	let mut des = descendant;
+	for category in list.iter_mut() {
+		match category.insert_descendant_if_match(des) {
+			Some(r) => {
+				des = r;
+			}
+			None => return None,
+		}
+	}
+	Some(des)
 }
