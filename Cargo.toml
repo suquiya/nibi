@@ -10,8 +10,9 @@ repository = "https://github.com/suquiya/nibi"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.218", features = ["derive"] }
 ron = "0.8.1"
-pulldown-cmark = "0.12.2"
-combu = { version = "1.2.0", features = ["vector_serde"] }
+pulldown-cmark = "0.13.0"
+combu = { version = "1.3.0", features = ["vector_serde"] }
 time = { version = "0.3.37", features = ["macros", "serde"] }
+promkit = "0.7.0"

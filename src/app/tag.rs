@@ -8,7 +8,7 @@ pub struct Tag {
 	pub path_name: String,
 	pub description: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub ex: Option<BTreeMap<String, String>>,
+	pub opt_attr: Option<BTreeMap<String, String>>,
 }
 
 impl Tag {
@@ -18,7 +18,7 @@ impl Tag {
 			path_name,
 			name,
 			description,
-			ex: None,
+			opt_attr: None,
 		}
 	}
 }

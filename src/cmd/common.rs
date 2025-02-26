@@ -1,6 +1,6 @@
 use combu::{
 	action::bundle::Bundle, action_result, command::presets::func::help_tablize_with_alias_dedup,
-	preset_help_command, Command,
+	preset_help_command, Command, FlagValue,
 };
 
 use crate::cli;
@@ -35,7 +35,14 @@ pub fn overwrite_confirm(yes_no_flag: Option<bool>) -> Option<bool> {
 
 pub fn get_yes_no(yes_no_flag: Option<bool>, message: &str) -> Option<bool> {
 	match yes_no_flag {
-		None => cli::prompt::yes_or_no(message, -1),
+		None => cli::prompt::yes_or_no(message),
 		_ => yes_no_flag,
+	}
+}
+
+pub fn take_to_string_option(bundle: &mut Bundle, flag_name: &str) -> Option<String> {
+	match bundle.take_inputted_local_flag_value_of(flag_name) {
+		Some(FlagValue::String(s)) => Some(s),
+		_ => None,
 	}
 }

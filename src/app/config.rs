@@ -12,14 +12,23 @@ use super::fsio::{new_empty_file, open_file_with_overwrite_mode, write_string};
 pub struct Config {
 	project_name: String,
 	site_name: String,
+	#[serde(default)]
 	dir_conf: DirConf,
+}
+
+pub fn default_project_name() -> String {
+	String::from("nibi_project")
+}
+
+pub fn default_site_name() -> String {
+	String::from("nibi_site")
 }
 
 impl Default for Config {
 	fn default() -> Self {
 		Self {
-			project_name: String::from("nibi_project"),
-			site_name: String::from("site_title"),
+			project_name: default_project_name(),
+			site_name: default_site_name(),
 			dir_conf: DirConf::default(),
 		}
 	}
@@ -70,12 +79,27 @@ impl Config {
 	}
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct DirConf {
-	site: PathBuf,   // 出力先
-	metals: PathBuf, // 金属塊
-	igata: PathBuf,  // 鋳型
-	gears: PathBuf,  //アドオン設定置き予定
+	#[serde(default)]
+	site: PathBuf, // 出力先
+	#[serde(default)]
+	metals: PathBuf, // 金属塊とそのデータ
+	#[serde(default)]
+	igata: PathBuf, // 鋳型
+	#[serde(default)]
+	gears: PathBuf, //アドオン設定置き予定
+}
+
+impl Default for DirConf {
+	fn default() -> Self {
+		Self {
+			site: PathBuf::from(String::from("site")),
+			metals: PathBuf::from(String::from("metals")),
+			igata: PathBuf::from(String::from("igata")),
+			gears: PathBuf::from(String::from("gears")),
+		}
+	}
 }
 
 impl DirConf {
@@ -92,16 +116,10 @@ impl DirConf {
 			Err(errs)
 		}
 	}
-}
 
-impl Default for DirConf {
-	fn default() -> Self {
-		Self {
-			site: PathBuf::from(String::from("site")),
-			metals: PathBuf::from(String::from("metals")),
-			igata: PathBuf::from(String::from("igata")),
-			gears: PathBuf::from(String::from("gears")),
-		}
+	pub fn is_default(&self) -> bool {
+		let default = DirConf::default();
+		return self == &default;
 	}
 }
 

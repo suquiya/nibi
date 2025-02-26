@@ -1,35 +1,34 @@
-use super::stdio;
-use std::io::Write;
-/// show prompt for yes or no. refs: https://github.com/conradkleinespel/rprompt/blob/master/src/lib.rs
-pub fn yes_or_no(message: &str, retry: i16) -> Option<bool> {
-	let mut answer: String;
-	let mut stdout = std::io::stdout();
-	let yes = vec!["yes", "y"];
-	let no = vec!["no", "n"];
-	let mut retry_count = retry;
-	if retry < 0 {
-		retry_count = std::i16::MAX;
-	}
+use promkit::preset::readline::Readline;
 
-	loop {
-		write!(stdout, "{} [Yes/No]: ", message).unwrap();
-		stdout.flush().unwrap();
-		answer = stdio::read_stdin().to_ascii_lowercase();
-		match answer.as_str() {
-			str if yes.contains(&str) => {
-				return Some(true);
-			}
-			str if no.contains(&str) => {
-				return Some(false);
-			}
-			_ => {
-				if retry_count > 0 {
-					println!("[Y]esか[N]oで入力してください...残り{}回", retry_count);
-					retry_count -= 1;
-				} else {
-					return None;
+pub fn yes_or_no(message: &str) -> Option<bool> {
+	let confirm = Readline::default()
+		.prefix(format!("{} [Yes/No]: ", message))
+		.validator(
+			|text: &str| -> bool {
+				["yes", "y", "no", "n", "Y", "N", "YES", "NO", "Yes", "No"]
+					.iter()
+					.any(|yn| *yn == text)
+			},
+			|_| String::from("Accepts only 'y' or 'n' as an answer"),
+		)
+		.prompt();
+	match confirm {
+		Ok(mut prompt) => {
+			let r = prompt.run();
+			match r {
+				Ok(prompt) => {
+					let text = prompt.to_lowercase();
+					if text.starts_with('y') {
+						Some(true)
+					} else if text.starts_with('n') {
+						Some(false)
+					} else {
+						None
+					}
 				}
+				Err(_) => return None,
 			}
 		}
+		Err(_) => None,
 	}
 }

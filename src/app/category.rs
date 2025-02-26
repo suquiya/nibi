@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use combu::Vector;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -14,7 +15,7 @@ pub struct Category {
 	#[serde(skip_serializing_if = "Vector::is_none")]
 	pub children: Vector<Category>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub ex: Option<BTreeMap<String, String>>,
+	pub opt_attrs: Option<BTreeMap<String, String>>,
 }
 
 impl Category {
@@ -25,7 +26,7 @@ impl Category {
 		description: String,
 		parent_id: Option<usize>,
 		children: Vector<Category>,
-		ex: Option<BTreeMap<String, String>>,
+		opt_attrs: Option<BTreeMap<String, String>>,
 	) -> Self {
 		Self {
 			id,
@@ -34,7 +35,7 @@ impl Category {
 			description,
 			parent_id,
 			children,
-			ex,
+			opt_attrs,
 		}
 	}
 	pub fn new(id: usize, path_name: String, name: String, description: String) -> Self {

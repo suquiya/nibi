@@ -2,7 +2,9 @@ use combu::{
 	action::bundle::Bundle, action_result, checks, done, flags, license, vector, Command, Context,
 	Flag,
 };
-use std::path::Path;
+use combu::{flag, no_flag, yes_flag, FlagType, FlagValue, Vector};
+use std::env::current_dir;
+use std::path::{Path, PathBuf};
 use std::{fs, io::ErrorKind::AlreadyExists};
 
 use crate::cmd::common::get_yes_no;
@@ -11,7 +13,7 @@ use crate::{
 	cmd::common::overwrite_confirm,
 };
 
-use super::common::{get_flagged_yes_no, sub_help};
+use super::common::{get_flagged_yes_no, sub_help, take_to_string_option};
 
 pub fn cmd() -> Command {
 	return Command::with_all_field(
@@ -22,12 +24,67 @@ pub fn cmd() -> Command {
 		license![],
 		None,
 		"nibi init [directory path: default is current]".to_owned(),
-		flags![yes, no],
+		flags![yes, no, ["import-ingots-dir-path"=>[>string,="import ingots path"]]],
 		flags![],
 		vector![],
 		String::default(),
 		vector![sub_help()],
 	);
+}
+
+pub fn flags() -> Vector<Flag> {
+	return vector![
+		yes_flag!(),
+		no_flag!(),
+		Flag::with_all_field(
+			"import-ingots-dir-path".to_owned(),
+			"import ingots path: 取り込みたいingotsを収納したディレクトリのパス".to_owned(),
+			vector!['i'],
+			Vector::default(),
+			FlagType::String,
+			FlagValue::from(""),
+		),
+		Flag::with_all_field(
+			"skip-create-prompt".to_owned(),
+			"skip prompt for project information: 初期化時のプロンプトをスキップ".to_owned(),
+			vector!['s'],
+			Vector::default(),
+			FlagType::Bool,
+			FlagValue::Bool(false),
+		),
+		Flag::with_all_field(
+			"force".to_owned(),
+			"force init dir: ファイルが存在しても強制的に初期化".to_owned(),
+			vector!['f'],
+			Vector::default(),
+			FlagType::Bool,
+			FlagValue::Bool(false),
+		),
+		Flag::with_all_field(
+			"project-name".to_owned(),
+			"project name: プロジェクト名".to_owned(),
+			vector!['p'],
+			vector![=>String, "pn", "p-name", "name"],
+			FlagType::String,
+			FlagValue::from("")
+		),
+		Flag::with_all_field(
+			"site-name".to_owned(),
+			"site name: サイト名".to_owned(),
+			vector!['n'],
+			vector![=>String,"sn","s-name"],
+			FlagType::String,
+			FlagValue::from("")
+		),
+		Flag::with_all_field(
+			"config-file-type".to_owned(),
+			"file type of config: コンフィグファイルの形式".to_owned(),
+			vector!['t'],
+			vector![=>String, "cft", "config-ft"],
+			FlagType::String,
+			FlagValue::from("ron")
+		)
+	];
 }
 
 pub fn route(cmd: Command, ctx: Context) -> action_result!() {
@@ -37,31 +94,66 @@ pub fn route(cmd: Command, ctx: Context) -> action_result!() {
 
 pub fn init_action(cmd: Command, ctx: Context) -> action_result!() {
 	let bundle = Bundle::new(ctx, cmd);
-	let dir_path = match bundle.args().front() {
-		Some(path) => path,
-		None => ".",
-	};
-	let yes_no = get_flagged_yes_no(&bundle);
-	init(dir_path, yes_no);
+
+	init(InitConfig::from(bundle));
 	done!()
 }
 
-fn init(dir_path: &str, yes_no: Option<bool>) {
-	let dir_path = Path::new(dir_path);
+struct InitConfig {
+	pub dir_path: PathBuf,
+	pub yes_no: Option<bool>,
+	pub ingots_dir_path: Option<String>,
+	pub project_name: Option<String>,
+	pub site_name: Option<String>,
+	pub skip_prompt: bool,
+	pub config_file_type: Option<String>,
+	pub force: bool,
+}
+
+impl From<Bundle> for InitConfig {
+	fn from(mut bundle: Bundle) -> Self {
+		InitConfig {
+			dir_path: match bundle.args().front() {
+				Some(path) => {
+					let path = PathBuf::from(path);
+					match &path {
+						p if p.is_absolute() => path,
+						_ => {
+							let p = current_dir().unwrap().join(path);
+							p.canonicalize().unwrap()
+						}
+					}
+				}
+				None => current_dir().unwrap(),
+			},
+			yes_no: get_flagged_yes_no(&bundle),
+			ingots_dir_path: take_to_string_option(&mut bundle, "import-ingots-dir-path"),
+			project_name: take_to_string_option(&mut bundle, "project-name"),
+			site_name: take_to_string_option(&mut bundle, "site-name"),
+			skip_prompt: bundle.is_flag_true("skip_prompt"),
+			config_file_type: take_to_string_option(&mut bundle, "config-file-type"),
+			force: bundle.is_flag_true("force"),
+		}
+	}
+}
+
+fn init(init_config: InitConfig) {
+	let dir_path = PathBuf::from(&init_config.dir_path);
+	let yes_no = init_config.yes_no.clone();
 
 	// init先フォルダの状態確認となければ作成
-	if !create_root_dir(dir_path, yes_no) {
+	if !create_root_dir(&dir_path, init_config.yes_no) {
 		print_early_exit_message();
 		return;
 	}
 
-	let config = create_config();
-	if !create_config_file(dir_path, &config, yes_no) {
+	let config = get_config(&dir_path, &init_config);
+	if !create_config_file(&dir_path, &config, yes_no) {
 		print_early_exit_message();
 		return;
 	}
 
-	if !create_src_dirs(&config, dir_path) {
+	if !create_src_dirs(&config, &dir_path) {
 		print_early_exit_message();
 		return;
 	}
@@ -114,10 +206,16 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 	}
 }
 
-fn create_config() -> Config {
-	// TODO: コンフィグ作成問答の実装
-	Config::default()
+fn get_config(dir_path: &Path, init_config: &InitConfig) -> Config {
+	if init_config.skip_prompt {
+		// プロンプトのskipリクエストがはいっているならフラグと引数の結果からコンフィグを返す
+		return;
+	};
+
+	// コンフィグ作成に必要な情報を入力してもらう
 }
+
+fn get_config_from_init_config(init_config: &InitConfig) -> Config {}
 
 fn create_config_file(dir_path: &Path, config: &Config, yes_no: Option<bool>) -> bool {
 	let config_path = config::get_config_path(dir_path, "ron");
@@ -167,5 +265,5 @@ fn create_src_dirs(config: &Config, root_dir: &Path) -> bool {
 }
 
 fn print_early_exit_message() {
-	println!("init処理を中断し、プログラムを終了します。");
+	println!("初期化処理を中断し、プログラムを終了します。");
 }
