@@ -2,11 +2,13 @@ use combu::{
 	action::bundle::Bundle, action_result, checks, done, flags, license, vector, Command, Context,
 	Flag,
 };
-use combu::{flag, no_flag, yes_flag, FlagType, FlagValue, Vector};
-use std::env::current_dir;
+use combu::{no_flag, yes_flag, FlagType, FlagValue, Vector};
 use std::path::{Path, PathBuf};
 use std::{fs, io::ErrorKind::AlreadyExists};
 
+use crate::app::config::default_config_file_type;
+use crate::app::path::{file_name, get_abs_path_from_option};
+use crate::cli::prompt::inquiry_str;
 use crate::cmd::common::get_yes_no;
 use crate::{
 	app::config::{self, Config},
@@ -47,7 +49,7 @@ pub fn flags() -> Vector<Flag> {
 		Flag::with_all_field(
 			"skip-create-prompt".to_owned(),
 			"skip prompt for project information: 初期化時のプロンプトをスキップ".to_owned(),
-			vector!['s'],
+			vector![],
 			Vector::default(),
 			FlagType::Bool,
 			FlagValue::Bool(false),
@@ -71,7 +73,7 @@ pub fn flags() -> Vector<Flag> {
 		Flag::with_all_field(
 			"site-name".to_owned(),
 			"site name: サイト名".to_owned(),
-			vector!['n'],
+			vector!['s'],
 			vector![=>String,"sn","s-name"],
 			FlagType::String,
 			FlagValue::from("")
@@ -113,19 +115,7 @@ struct InitConfig {
 impl From<Bundle> for InitConfig {
 	fn from(mut bundle: Bundle) -> Self {
 		InitConfig {
-			dir_path: match bundle.args().front() {
-				Some(path) => {
-					let path = PathBuf::from(path);
-					match &path {
-						p if p.is_absolute() => path,
-						_ => {
-							let p = current_dir().unwrap().join(path);
-							p.canonicalize().unwrap()
-						}
-					}
-				}
-				None => current_dir().unwrap(),
-			},
+			dir_path: get_abs_path_from_option(bundle.args().front()),
 			yes_no: get_flagged_yes_no(&bundle),
 			ingots_dir_path: take_to_string_option(&mut bundle, "import-ingots-dir-path"),
 			project_name: take_to_string_option(&mut bundle, "project-name"),
@@ -137,18 +127,39 @@ impl From<Bundle> for InitConfig {
 	}
 }
 
-fn init(init_config: InitConfig) {
+impl InitConfig {
+	pub fn should_prompt(&self) -> bool {
+		!self.skip_prompt
+			|| self.project_name.is_none()
+			|| self.site_name.is_none()
+			|| self.config_file_type.is_none()
+			|| self.ingots_dir_path.is_none()
+	}
+
+	pub fn get_force_yes_no(&self) -> Option<bool> {
+		if self.force {
+			Some(true)
+		} else {
+			self.yes_no
+		}
+	}
+}
+
+fn init(mut init_config: InitConfig) {
 	let dir_path = PathBuf::from(&init_config.dir_path);
-	let yes_no = init_config.yes_no.clone();
+
+	if init_config.should_prompt() {
+		prompt_init_config(&mut init_config)
+	}
 
 	// init先フォルダの状態確認となければ作成
-	if !create_root_dir(&dir_path, init_config.yes_no) {
+	if !create_root_dir(&dir_path, init_config.get_force_yes_no()) {
 		print_early_exit_message();
 		return;
 	}
 
-	let config = get_config(&dir_path, &init_config);
-	if !create_config_file(&dir_path, &config, yes_no) {
+	let config = get_config_from_init_config(&init_config);
+	if !create_config_file(&dir_path, &config, init_config.get_force_yes_no()) {
 		print_early_exit_message();
 		return;
 	}
@@ -206,16 +217,38 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 	}
 }
 
-fn get_config(dir_path: &Path, init_config: &InitConfig) -> Config {
-	if init_config.skip_prompt {
-		// プロンプトのskipリクエストがはいっているならフラグと引数の結果からコンフィグを返す
-		return;
+fn prompt_init_config(init_config: &mut InitConfig) {
+	// init_configをプロンプトで補足する
+	println!("input your project information for initialization.");
+	if init_config.project_name.is_none() {
+		let dir_path = file_name(&init_config.dir_path);
+		let project_name = inquiry_str("project name", &dir_path);
+		init_config.project_name = Some(project_name);
 	};
 
-	// コンフィグ作成に必要な情報を入力してもらう
+	if init_config.site_name.is_none() {
+		let pn = init_config.project_name.as_ref().unwrap();
+		let sn = inquiry_str("site name", pn);
+		init_config.site_name = Some(sn);
+	}
+
+	if init_config.config_file_type.is_none() {
+		let config_file_type = inquiry_str("config file type", &default_config_file_type());
+		init_config.config_file_type = Some(config_file_type);
+	}
 }
 
-fn get_config_from_init_config(init_config: &InitConfig) -> Config {}
+fn get_config_from_init_config(init_config: &InitConfig) -> Config {
+	let project_name = match &init_config.project_name {
+		Some(pn) => pn.clone(),
+		None => file_name(&init_config.dir_path),
+	};
+	let site_name = match &init_config.site_name {
+		Some(sn) => sn.clone(),
+		None => project_name.clone(),
+	};
+	Config::new(project_name, site_name)
+}
 
 fn create_config_file(dir_path: &Path, config: &Config, yes_no: Option<bool>) -> bool {
 	let config_path = config::get_config_path(dir_path, "ron");
@@ -251,14 +284,20 @@ fn create_config_file(dir_path: &Path, config: &Config, yes_no: Option<bool>) ->
 fn create_src_dirs(config: &Config, root_dir: &Path) -> bool {
 	match config.get_dir_conf().create_src_dirs(root_dir) {
 		Err(errs) => {
+			let mut r: bool = true;
 			for e in errs {
-				println!(
-					"ディレクトリ {} の作成中にエラーが発生しました: {}",
-					e.1.display(),
-					e.0
-				);
+				if e.0.kind() == AlreadyExists {
+					println!("ディレクトリ {} は既に存在します", e.1.display());
+				} else {
+					println!(
+						"ディレクトリ {} の作成中にエラーが発生しました: {}",
+						e.1.display(),
+						e.0
+					);
+					r = false;
+				}
 			}
-			false
+			r
 		}
 		_ => true,
 	}

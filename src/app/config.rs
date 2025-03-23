@@ -123,6 +123,10 @@ impl DirConf {
 	}
 }
 
+pub fn default_config_file_type() -> String {
+	String::from("ron")
+}
+
 pub fn get_config_path(dir_path: &Path, ext: &str) -> PathBuf {
 	let mut target = dir_path.to_path_buf();
 	target.push("config");
