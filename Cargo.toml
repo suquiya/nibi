@@ -2,7 +2,7 @@
 name = "nibi"
 version = "0.1.2"
 authors = ["suquiya <22910980+suquiya@users.noreply.github.com>"]
-edition = "2021"
+edition = "2024"
 description = "Nibi is a static site generator. (WIP, implementing)"
 license = "BSD-3-Clause"
 repository = "https://github.com/suquiya/nibi"
