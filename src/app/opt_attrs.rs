@@ -15,12 +15,19 @@ pub enum OptAttrValue {
 	Map(BTreeMap<String, OptAttrValue>),
 }
 
+impl Default for OptAttrValue {
+	fn default() -> Self {
+		Self::None
+	}
+}
+
+#[derive(Default)]
 pub struct OptAttrs(pub Option<BTreeMap<String, OptAttrValue>>);
 
 impl OptAttrs {
 	/// Creates new OptAttrs
 	pub fn new() -> Self {
-		Self(None)
+		Self::default()
 	}
 	/// Creates new OptAttrs
 	pub fn new_with(opt: BTreeMap<String, OptAttrValue>) -> Self {
@@ -70,9 +77,8 @@ impl OptAttrs {
 
 	/// Clears `OptAttrs`'s inner.
 	pub fn clear(&mut self) {
-		match &mut self.0 {
-			Some(inner) => inner.clear(),
-			_ => {}
+		if let Some(inner) = &mut self.0 {
+			inner.clear()
 		}
 	}
 }

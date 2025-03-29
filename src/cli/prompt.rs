@@ -26,7 +26,7 @@ pub fn yes_or_no(message: &str) -> Option<bool> {
 						None
 					}
 				}
-				Err(_) => return None,
+				Err(_) => None,
 			}
 		}
 		Err(_) => None,

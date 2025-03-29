@@ -72,9 +72,7 @@ impl Category {
 				None
 			}
 			Some(_) => match &mut self.children {
-				Vector(Some(children)) => {
-					return insert_descendant_to_category_list(children, descendant)
-				}
+				Vector(Some(children)) => insert_descendant_to_category_list(children, descendant),
 				Vector(None) => Some(descendant),
 			},
 			None => Some(descendant),
@@ -83,7 +81,7 @@ impl Category {
 }
 
 pub fn insert_descendant_to_category_list(
-	list: &mut Vec<Category>,
+	list: &mut [Category],
 	descendant: Category,
 ) -> Option<Category> {
 	let mut des = descendant;

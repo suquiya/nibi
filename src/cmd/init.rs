@@ -1,8 +1,8 @@
 use combu::{
-	action::bundle::Bundle, action_result, checks, done, flags, license, vector, Command, Context,
-	Flag,
+	Command, Context, Flag, action::bundle::Bundle, action_result, checks, done, flags, license,
+	vector,
 };
-use combu::{no_flag, yes_flag, FlagType, FlagValue, Vector};
+use combu::{FlagType, FlagValue, Vector, no_flag, yes_flag};
 use std::path::{Path, PathBuf};
 use std::{fs, io::ErrorKind::AlreadyExists};
 
@@ -18,7 +18,7 @@ use crate::{
 use super::common::{get_flagged_yes_no, sub_help, take_to_string_option};
 
 pub fn cmd() -> Command {
-	return Command::with_all_field(
+	Command::with_all_field(
 		"init".to_owned(),
 		Some(route),
 		String::default(),
@@ -31,11 +31,11 @@ pub fn cmd() -> Command {
 		vector![],
 		String::default(),
 		vector![sub_help()],
-	);
+	)
 }
 
 pub fn flags() -> Vector<Flag> {
-	return vector![
+	vector![
 		yes_flag!(),
 		no_flag!(),
 		Flag::with_all_field(
@@ -86,7 +86,7 @@ pub fn flags() -> Vector<Flag> {
 			FlagType::String,
 			FlagValue::from("ron")
 		)
-	];
+	]
 }
 
 pub fn route(cmd: Command, ctx: Context) -> action_result!() {
@@ -137,11 +137,7 @@ impl InitConfig {
 	}
 
 	pub fn get_force_yes_no(&self) -> Option<bool> {
-		if self.force {
-			Some(true)
-		} else {
-			self.yes_no
-		}
+		if self.force { Some(true) } else { self.yes_no }
 	}
 }
 
@@ -166,7 +162,6 @@ fn init(mut init_config: InitConfig) {
 
 	if !create_src_dirs(&config, &dir_path) {
 		print_early_exit_message();
-		return;
 	}
 }
 
@@ -212,7 +207,7 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 				}
 			}
 			println!("指定されたパスでエラーが発生しました:{}", err);
-			return false;
+			false
 		}
 	}
 }

@@ -1,6 +1,6 @@
 use combu::{
-	action::bundle::Bundle, action_result, command::presets::func::help_tablize_with_alias_dedup,
-	preset_help_command, Command, FlagValue,
+	Command, FlagValue, action::bundle::Bundle, action_result,
+	command::presets::func::help_tablize_with_alias_dedup, preset_help_command,
 };
 
 use crate::cli;
@@ -16,16 +16,14 @@ pub fn get_flagged_yes_no(bundle: &Bundle) -> Option<bool> {
 		.get_bool_unwrap()
 	{
 		Some(false)
+	} else if bundle
+		.get_local_flag_value_of("yes")
+		.unwrap()
+		.get_bool_unwrap()
+	{
+		Some(true)
 	} else {
-		if bundle
-			.get_local_flag_value_of("yes")
-			.unwrap()
-			.get_bool_unwrap()
-		{
-			Some(true)
-		} else {
-			None
-		}
+		None
 	}
 }
 

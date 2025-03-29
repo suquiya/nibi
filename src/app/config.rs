@@ -110,16 +110,12 @@ impl DirConf {
 				errs.push((e, path));
 			}
 		}
-		if errs.is_empty() {
-			Ok(())
-		} else {
-			Err(errs)
-		}
+		if errs.is_empty() { Ok(()) } else { Err(errs) }
 	}
 
 	pub fn is_default(&self) -> bool {
 		let default = DirConf::default();
-		return self == &default;
+		self == &default
 	}
 }
 
@@ -131,7 +127,7 @@ pub fn get_config_path(dir_path: &Path, ext: &str) -> PathBuf {
 	let mut target = dir_path.to_path_buf();
 	target.push("config");
 	target.set_extension(ext);
-	return target;
+	target
 }
 
 pub fn create_config_file(config_path: &Path, config: &Config) -> Result<File, IOError> {
@@ -140,9 +136,7 @@ pub fn create_config_file(config_path: &Path, config: &Config) -> Result<File, I
 			let serialized_config = config.to_ron(None);
 			write_string(target_file, serialized_config)
 		}
-		err => {
-			return err;
-		}
+		err => err,
 	}
 }
 
@@ -152,8 +146,6 @@ pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IO
 			let serialized_config = config.to_ron(None);
 			write_string(target_file, serialized_config)
 		}
-		err => {
-			return err;
-		}
+		err => err,
 	}
 }
