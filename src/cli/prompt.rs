@@ -33,6 +33,10 @@ pub fn yes_or_no(message: &str) -> Option<bool> {
 	}
 }
 
+pub fn yes_or_no_with_default(message: &str, default: bool) -> bool {
+	yes_or_no(message).unwrap_or(default)
+}
+
 pub fn inquiry_str(message: &str, default: &str) -> String {
 	let m = format!("{}: ({}) ", message, default);
 	match readline(&m) {
@@ -41,15 +45,12 @@ pub fn inquiry_str(message: &str, default: &str) -> String {
 	}
 }
 
-pub fn selector(message: &str, options: Vec<String>, default: &str) -> Option<String> {
+pub fn selector(message: &str, options: &[&str], default: &str) -> String {
 	let m = format!("{}: ({}) ", message, default);
 	let selector = Listbox::new(options).title(m).prompt();
 	match selector {
-		Ok(mut prompt) => match prompt.run() {
-			Ok(prompt) => Some(prompt),
-			Err(_) => None,
-		},
-		Err(_) => None,
+		Ok(mut prompt) => prompt.run().ok().unwrap_or(default.to_string()),
+		Err(_) => default.to_string(),
 	}
 }
 
@@ -60,10 +61,7 @@ pub fn readline(message: &str) -> Option<String> {
 	match confirm {
 		Ok(mut prompt) => {
 			let r = prompt.run();
-			match r {
-				Ok(prompt) => Some(prompt),
-				Err(_) => None,
-			}
+			r.ok()
 		}
 		Err(_) => None,
 	}

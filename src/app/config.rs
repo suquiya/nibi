@@ -6,7 +6,8 @@ use ron::error::SpannedResult;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 
-use super::fsio::{new_empty_file, open_file_with_overwrite_mode, write_string};
+use super::fs::io::{new_empty_file, open_file_with_overwrite_mode, write_string};
+use super::serde::FileType;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -119,8 +120,8 @@ impl DirConf {
 	}
 }
 
-pub fn default_config_file_type() -> String {
-	String::from("ron")
+pub fn default_config_file_type() -> FileType {
+	FileType::Ron
 }
 
 pub fn get_config_path(dir_path: &Path, ext: &str) -> PathBuf {

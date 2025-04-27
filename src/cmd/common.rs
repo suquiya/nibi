@@ -38,9 +38,23 @@ pub fn get_yes_no(yes_no_flag: Option<bool>, message: &str) -> Option<bool> {
 	}
 }
 
+pub fn get_yes_no_with_default(yes_no_flag: Option<bool>, message: &str, default: bool) -> bool {
+	match yes_no_flag {
+		None => cli::prompt::yes_or_no_with_default(message, default),
+		Some(f) => f,
+	}
+}
+
 pub fn take_to_string_option(bundle: &mut Bundle, flag_name: &str) -> Option<String> {
-	match bundle.take_inputted_local_flag_value_of(flag_name) {
+	match bundle.take_inputted_flag_value_of(flag_name) {
 		Some(FlagValue::String(s)) => Some(s),
+		_ => None,
+	}
+}
+
+pub fn take_to_bool_option(bundle: &mut Bundle, flag_name: &str) -> Option<bool> {
+	match bundle.take_inputted_flag_value_of(flag_name) {
+		Some(FlagValue::Bool(b)) => Some(b),
 		_ => None,
 	}
 }

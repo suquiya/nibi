@@ -4,18 +4,21 @@ use combu::{
 };
 use combu::{FlagType, FlagValue, Vector, no_flag, yes_flag};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::{fs, io::ErrorKind::AlreadyExists};
+use strum::VariantNames;
 
 use crate::app::config::default_config_file_type;
-use crate::app::path::{file_name, get_abs_path_from_option};
-use crate::cli::prompt::inquiry_str;
-use crate::cmd::common::get_yes_no;
+use crate::app::fs::path::{file_name, get_abs_path_from_option};
+use crate::app::serde::FileType;
+use crate::cli::prompt::{inquiry_str, selector};
+use crate::cmd::common::{get_yes_no, get_yes_no_with_default};
 use crate::{
 	app::config::{self, Config},
 	cmd::common::overwrite_confirm,
 };
 
-use super::common::{get_flagged_yes_no, sub_help, take_to_string_option};
+use super::common::{get_flagged_yes_no, sub_help, take_to_bool_option, take_to_string_option};
 
 pub fn cmd() -> Command {
 	Command::with_all_field(
@@ -26,7 +29,7 @@ pub fn cmd() -> Command {
 		license![],
 		None,
 		"nibi init [directory path: default is current]".to_owned(),
-		flags![yes, no, ["import-ingots-dir-path"=>[>string,="import ingots path"]]],
+		flags(),
 		flags![],
 		vector![],
 		String::default(),
@@ -50,7 +53,7 @@ pub fn flags() -> Vector<Flag> {
 			"skip-create-prompt".to_owned(),
 			"skip prompt for project information: 初期化時のプロンプトをスキップ".to_owned(),
 			vector![],
-			Vector::default(),
+			vector![=>String, "skip_create_prompt", "skip-prompt", "skip_prompt"],
 			FlagType::Bool,
 			FlagValue::Bool(false),
 		),
@@ -66,7 +69,7 @@ pub fn flags() -> Vector<Flag> {
 			"project-name".to_owned(),
 			"project name: プロジェクト名".to_owned(),
 			vector!['p'],
-			vector![=>String, "pn", "p-name", "name"],
+			vector![=>String, "pn", "p-name", "name", "project_name", "p_name"],
 			FlagType::String,
 			FlagValue::from("")
 		),
@@ -74,7 +77,7 @@ pub fn flags() -> Vector<Flag> {
 			"site-name".to_owned(),
 			"site name: サイト名".to_owned(),
 			vector!['s'],
-			vector![=>String,"sn","s-name"],
+			vector![=>String,"sn","s-name", "s_name", "site_name"],
 			FlagType::String,
 			FlagValue::from("")
 		),
@@ -82,9 +85,18 @@ pub fn flags() -> Vector<Flag> {
 			"config-file-type".to_owned(),
 			"file type of config: コンフィグファイルの形式".to_owned(),
 			vector!['t'],
-			vector![=>String, "cft", "config-ft"],
+			vector![=>String, "cft", "config-ft", "config_ft", "config_file_type"],
 			FlagType::String,
 			FlagValue::from("ron")
+		),
+		Flag::with_all_field(
+			"vcs".to_owned(),
+			"will under management of vcs: 初期化後vcs(git)の初期化処理を実行してvcsの管理下に置く"
+				.to_owned(),
+			vector!['v'],
+			vector![=>String, "git"],
+			FlagType::Bool,
+			FlagValue::Bool(true)
 		)
 	]
 }
@@ -108,8 +120,9 @@ struct InitConfig {
 	pub project_name: Option<String>,
 	pub site_name: Option<String>,
 	pub skip_prompt: bool,
-	pub config_file_type: Option<String>,
+	pub config_file_type: Option<FileType>,
 	pub force: bool,
+	pub vcs: Option<bool>,
 }
 
 impl From<Bundle> for InitConfig {
@@ -121,8 +134,10 @@ impl From<Bundle> for InitConfig {
 			project_name: take_to_string_option(&mut bundle, "project-name"),
 			site_name: take_to_string_option(&mut bundle, "site-name"),
 			skip_prompt: bundle.is_flag_true("skip_prompt"),
-			config_file_type: take_to_string_option(&mut bundle, "config-file-type"),
+			config_file_type: take_to_string_option(&mut bundle, "config-file-type")
+				.and_then(|s| FileType::from_str(&s).ok()),
 			force: bundle.is_flag_true("force"),
+			vcs: take_to_bool_option(&mut bundle, "vcs"),
 		}
 	}
 }
@@ -228,8 +243,21 @@ fn prompt_init_config(init_config: &mut InitConfig) {
 	}
 
 	if init_config.config_file_type.is_none() {
-		let config_file_type = inquiry_str("config file type", &default_config_file_type());
+		let config_file_type = FileType::from_str(&selector(
+			"config file type",
+			FileType::VARIANTS,
+			&default_config_file_type().to_string(),
+		))
+		.unwrap_or(default_config_file_type());
 		init_config.config_file_type = Some(config_file_type);
+	}
+
+	if init_config.vcs.is_none() {
+		init_config.vcs = Some(get_yes_no_with_default(
+			init_config.yes_no,
+			"初期化プロセスの最後にgit init を行いますか？",
+			true,
+		));
 	}
 }
 
