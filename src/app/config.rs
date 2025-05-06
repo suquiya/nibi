@@ -85,7 +85,7 @@ pub struct DirConf {
 	#[serde(default)]
 	site: PathBuf, // 出力先
 	#[serde(default)]
-	metals: PathBuf, // 金属塊とそのデータ
+	zairyo: PathBuf, // 生地データなどの材料
 	#[serde(default)]
 	igata: PathBuf, // 鋳型
 	#[serde(default)]
@@ -96,7 +96,7 @@ impl Default for DirConf {
 	fn default() -> Self {
 		Self {
 			site: PathBuf::from(String::from("site")),
-			metals: PathBuf::from(String::from("metals")),
+			zairyo: PathBuf::from(String::from("zairyo")),
 			igata: PathBuf::from(String::from("igata")),
 			gears: PathBuf::from(String::from("gears")),
 		}
@@ -106,7 +106,7 @@ impl Default for DirConf {
 impl DirConf {
 	pub fn create_src_dirs(&self, parent_path: &Path) -> Result<(), Vec<(IOError, &PathBuf)>> {
 		let mut errs = vec![];
-		for path in [&self.metals, &self.igata, &self.gears] {
+		for path in [&self.zairyo, &self.igata, &self.gears] {
 			if let Err(e) = fs::create_dir(parent_path.join(path)) {
 				errs.push((e, path));
 			}

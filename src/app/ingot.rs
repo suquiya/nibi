@@ -1,5 +1,6 @@
 use std::path::PathBuf;
-use time::PrimitiveDateTime;
+
+use jiff::Timestamp;
 
 #[derive(Debug)]
 pub struct Ingot {
@@ -7,15 +8,13 @@ pub struct Ingot {
 	pub author: usize,
 	pub pname: String,
 	pub path: PathBuf,
-	pub created: PrimitiveDateTime,
-	pub created_gmt: PrimitiveDateTime,
+	pub created: Timestamp,
 	pub content: String,
 	pub title: String,
 	pub excerpt: String,
 	pub status: Status,
 	pub comment_status: CommentStatus,
-	pub modified: PrimitiveDateTime,
-	pub modified_gmt: PrimitiveDateTime,
+	pub modified: Timestamp,
 	pub parent: usize,
 	pub tag: Vec<usize>,
 	pub category: Vec<usize>,

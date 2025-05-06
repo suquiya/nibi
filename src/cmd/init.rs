@@ -3,13 +3,14 @@ use combu::{
 	vector,
 };
 use combu::{FlagType, FlagValue, Vector, no_flag, yes_flag};
+use exrs::cmd::exes;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{fs, io::ErrorKind::AlreadyExists};
 use strum::VariantNames;
 
 use crate::app::config::default_config_file_type;
-use crate::app::fs::path::{file_name, get_abs_path_from_option};
+use crate::app::fs::path::{file_name, get_abs_path_from_option, get_dir_path_string};
 use crate::app::serde::FileType;
 use crate::cli::prompt::{inquiry_str, selector};
 use crate::cmd::common::{get_yes_no, get_yes_no_with_default};
@@ -154,6 +155,10 @@ impl InitConfig {
 	pub fn get_force_yes_no(&self) -> Option<bool> {
 		if self.force { Some(true) } else { self.yes_no }
 	}
+
+	pub fn vcs_init(&self) -> bool {
+		self.vcs.unwrap_or(true)
+	}
 }
 
 fn init(mut init_config: InitConfig) {
@@ -177,6 +182,10 @@ fn init(mut init_config: InitConfig) {
 
 	if !create_src_dirs(&config, &dir_path) {
 		print_early_exit_message();
+	}
+
+	if init_config.vcs_init() {
+		init_vcs(&dir_path);
 	}
 }
 
@@ -324,6 +333,14 @@ fn create_src_dirs(config: &Config, root_dir: &Path) -> bool {
 		}
 		_ => true,
 	}
+}
+
+fn init_vcs(dir_path: &Path) {
+	let dir_path_str = get_dir_path_string(dir_path);
+	let cmd = vec!["git", "init", &dir_path_str];
+	println!("init vcs by: {}", cmd.join(" "));
+	let result = exes(cmd);
+	println!("{}", result);
 }
 
 fn print_early_exit_message() {

@@ -22,3 +22,10 @@ pub fn get_abs_path_from_option<T: Into<PathBuf>>(path_str: Option<T>) -> PathBu
 pub fn file_name(path: &Path) -> String {
 	path.file_name().unwrap().to_str().unwrap().to_string()
 }
+
+pub fn get_dir_path_string(path: &Path) -> String {
+	match path.to_str() {
+		Some(val) => val.to_string(),
+		None => path.to_string_lossy().to_string(),
+	}
+}
