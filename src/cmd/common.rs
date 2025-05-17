@@ -58,3 +58,13 @@ pub fn take_to_bool_option(bundle: &mut Bundle, flag_name: &str) -> Option<bool>
 		_ => None,
 	}
 }
+
+#[macro_export]
+macro_rules! route_common {
+	($action:ident) => {
+		|cmd: Command, ctx: Context| -> action_result!() {
+			combu::checks!(cmd, ctx, [error, help, version, license]);
+			$action(cmd, ctx)
+		}
+	};
+}

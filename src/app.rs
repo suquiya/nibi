@@ -1,3 +1,4 @@
+pub mod build;
 pub mod category;
 pub mod config;
 pub mod fs;

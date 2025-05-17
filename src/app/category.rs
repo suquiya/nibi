@@ -1,8 +1,13 @@
-use std::collections::BTreeMap;
+use std::{
+	collections::BTreeMap,
+	path::{Path, PathBuf},
+};
 
 use combu::Vector;
 
 use serde::{Deserialize, Serialize};
+
+use super::serde::{DeResult, FileType, read_deserialized_value};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Category {
@@ -94,4 +99,17 @@ pub fn insert_descendant_to_category_list(
 		}
 	}
 	Some(des)
+}
+
+fn categories_file_path(dir_path: &Path) -> PathBuf {
+	dir_path.join("categories.ron")
+}
+fn read_categories<R: std::io::Read>(reader: R, file_type: FileType) -> DeResult<Vec<Category>> {
+	read_deserialized_value(reader, file_type)
+}
+
+pub fn get_categories_from_dir_path(dir_path: &Path) -> Option<Vec<Category>> {
+	let file_path = categories_file_path(dir_path);
+	let file = std::fs::File::open(file_path).ok()?;
+	read_categories(file, FileType::Ron).ok()
 }

@@ -1,4 +1,4 @@
-use std::{fs::File, io, path::PathBuf};
+use std::{io, path::PathBuf};
 
 use ron::ser::PrettyConfig;
 use serde::Serialize;
@@ -13,14 +13,15 @@ use serde::Serialize;
 	strum::EnumString,
 	strum::Display,
 	strum::VariantNames,
+	strum::EnumIter,
 )]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "lowercase")]
 pub enum FileType {
 	#[default]
 	Ron,
-	Json,
 	Toml,
+	Json,
 	Xml,
 	Hcl,
 }
@@ -47,16 +48,17 @@ pub enum SerError {
 	Hcl(hcl::Error),
 }
 
-type SerResult<T> = Result<T, SerError>;
+pub type SerResult<T> = Result<T, SerError>;
 
 pub fn write_serialized_string<T: Serialize, W: std::fmt::Write + std::io::Write>(
+	mut writer: W,
 	value: &T,
 	file_type: FileType,
-	writer: &mut W,
 ) -> SerResult<()> {
 	match file_type {
 		FileType::Ron => {
-			ron::ser::to_writer_pretty(writer, value, PrettyConfig::default()).map_err(SerError::Ron)
+			ron::ser::to_writer_pretty(writer, value, PrettyConfig::default().struct_names(true))
+				.map_err(SerError::Ron)
 		}
 		FileType::Json => serde_json::to_writer_pretty(writer, value).map_err(SerError::Json),
 		FileType::Toml => {
@@ -82,11 +84,12 @@ pub fn get_serialized_string<T: Serialize>(value: &T, file_type: FileType) -> Se
 	}
 }
 
-pub fn write_serialized_string_all<T: Serialize, W: std::fmt::Write + std::io::Write>(
+pub fn write_serialized_string_all<T: Serialize, W: std::io::Write>(
+	mut writer: W,
 	value: &T,
-	writer: &mut W,
+	file_type: FileType,
 ) -> SerResult<()> {
-	let str = get_serialized_string(value, FileType::Ron)?;
+	let str = get_serialized_string(value, file_type)?;
 	writer.write_all(str.as_bytes()).map_err(SerError::IO)
 }
 
@@ -100,7 +103,7 @@ pub enum DeError {
 	Hcl(hcl::Error),
 }
 
-type DeResult<T> = Result<T, DeError>;
+pub type DeResult<T> = Result<T, DeError>;
 
 pub fn get_deselialized_value<T: for<'de> serde::de::Deserialize<'de>>(
 	str: &str,
@@ -115,16 +118,18 @@ pub fn get_deselialized_value<T: for<'de> serde::de::Deserialize<'de>>(
 	}
 }
 
-pub fn read_deserialized_value<T: for<'de> serde::de::Deserialize<'de>>(
-	file: File,
+pub fn read_deserialized_value<T: for<'de> serde::de::Deserialize<'de>, R: std::io::Read>(
+	read: R,
 	file_type: FileType,
 ) -> DeResult<T> {
-	let content = io::read_to_string(file).map_err(DeError::IO)?;
+	let content = io::read_to_string(read).map_err(DeError::IO)?;
 	get_deselialized_value(&content, file_type)
 }
 
 #[cfg(test)]
 mod test {
+	use strum::VariantNames;
+
 	use super::FileType;
 	use std::str::FromStr;
 
@@ -137,15 +142,15 @@ mod test {
 	fn test_from_str() {
 		let strs: [String; 5] = [
 			"ron".into(),
-			"json".into(),
 			"toml".into(),
+			"json".into(),
 			"xml".into(),
 			"hcl".into(),
 		];
 		let enums = [
 			FileType::Ron,
-			FileType::Json,
 			FileType::Toml,
+			FileType::Json,
 			FileType::Xml,
 			FileType::Hcl,
 		];
@@ -185,5 +190,10 @@ mod test {
 		for (s, e) in strs.iter().zip(enums.iter()) {
 			assert_eq!(s.to_owned().to_owned(), e.to_string());
 		}
+	}
+
+	#[test]
+	fn test_variants() {
+		assert_eq!(FileType::VARIANTS, ["ron", "toml", "json", "xml", "hcl"]);
 	}
 }

@@ -1,6 +1,5 @@
 use combu::{
-	Command, Context, Flag, action::bundle::Bundle, action_result, checks, done, flags, license,
-	vector,
+	Command, Context, Flag, action::bundle::Bundle, action_result, done, flags, license, vector,
 };
 use combu::{FlagType, FlagValue, Vector, no_flag, yes_flag};
 use exrs::cmd::exes;
@@ -14,6 +13,7 @@ use crate::app::fs::path::{file_name, get_abs_path_from_option, get_dir_path_str
 use crate::app::serde::FileType;
 use crate::cli::prompt::{inquiry_str, selector};
 use crate::cmd::common::{get_yes_no, get_yes_no_with_default};
+use crate::route_common;
 use crate::{
 	app::config::{self, Config},
 	cmd::common::overwrite_confirm,
@@ -24,11 +24,11 @@ use super::common::{get_flagged_yes_no, sub_help, take_to_bool_option, take_to_s
 pub fn cmd() -> Command {
 	Command::with_all_field(
 		"init".to_owned(),
-		Some(route),
+		Some(route_common!(init_action)),
 		String::default(),
 		String::default(),
 		license![],
-		None,
+		Some("init nibi project".to_owned()),
 		"nibi init [directory path: default is current]".to_owned(),
 		flags(),
 		flags![],
@@ -102,11 +102,6 @@ pub fn flags() -> Vector<Flag> {
 	]
 }
 
-pub fn route(cmd: Command, ctx: Context) -> action_result!() {
-	checks!(cmd, ctx, [error, help, version, license]);
-	init_action(cmd, ctx)
-}
-
 pub fn init_action(cmd: Command, ctx: Context) -> action_result!() {
 	let bundle = Bundle::new(ctx, cmd);
 
@@ -175,7 +170,12 @@ fn init(mut init_config: InitConfig) {
 	}
 
 	let config = get_config_from_init_config(&init_config);
-	if !create_config_file(&dir_path, &config, init_config.get_force_yes_no()) {
+	if !create_config_file(
+		&dir_path,
+		&config,
+		init_config.config_file_type.unwrap(),
+		init_config.get_force_yes_no(),
+	) {
 		print_early_exit_message();
 		return;
 	}
@@ -282,9 +282,14 @@ fn get_config_from_init_config(init_config: &InitConfig) -> Config {
 	Config::new(project_name, site_name)
 }
 
-fn create_config_file(dir_path: &Path, config: &Config, yes_no: Option<bool>) -> bool {
-	let config_path = config::get_config_path(dir_path, "ron");
-	match config::create_config_file(&config_path, config) {
+fn create_config_file(
+	dir_path: &Path,
+	config: &Config,
+	file_type: FileType,
+	yes_no: Option<bool>,
+) -> bool {
+	let config_path = config::get_config_path(dir_path, file_type.to_string().as_str());
+	match config::create_config_file(&config_path, config, file_type) {
 		Ok(_) => {
 			println!("configファイルを作成しました: {}", config_path.display());
 			true

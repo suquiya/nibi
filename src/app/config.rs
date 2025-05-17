@@ -1,13 +1,15 @@
 use std::fs::{self, File};
 use std::io::Error as IOError;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
-use ron::error::SpannedResult;
-use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
+use strum::VariantNames;
 
-use super::fs::io::{new_empty_file, open_file_with_overwrite_mode, write_string};
-use super::serde::FileType;
+use super::fs::io::{new_empty_file, open_file_with_overwrite_mode, open_file_with_read_mode};
+use super::serde::{
+	DeResult, FileType, SerResult, read_deserialized_value, write_serialized_string_all,
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -54,25 +56,12 @@ impl Config {
 		self
 	}
 
-	pub fn to_ron(&self, pretty_config: Option<PrettyConfig>) -> String {
-		let pretty_config =
-			pretty_config.unwrap_or(PrettyConfig::new().depth_limit(3).struct_names(true));
-		match ron::ser::to_string_pretty(self, pretty_config) {
-			Err(err) => {
-				println!("{}", err);
-				// デフォルト値の出力失敗は想定外のため
-				panic!()
-			}
-			Ok(ron_string) => ron_string,
-		}
+	pub fn to_file(&self, file: &File, file_type: FileType) -> SerResult<()> {
+		write_serialized_string_all(file, self, file_type)
 	}
 
-	pub fn from_ron(ron_str: &str) -> SpannedResult<Self> {
-		ron::from_str(ron_str)
-	}
-
-	pub fn from_ron_file(file: File) -> SpannedResult<Config> {
-		ron::de::from_reader(file)
+	pub fn read<R: std::io::Read>(reader: R, file_type: FileType) -> DeResult<Config> {
+		read_deserialized_value(reader, file_type)
 	}
 
 	pub fn get_dir_conf(&self) -> &DirConf {
@@ -118,6 +107,22 @@ impl DirConf {
 		let default = DirConf::default();
 		self == &default
 	}
+
+	pub fn get_zairyo_path(&self, parent_path: &Path) -> PathBuf {
+		parent_path.join(&self.zairyo)
+	}
+
+	pub fn get_igata_path(&self, parent_path: &Path) -> PathBuf {
+		parent_path.join(&self.igata)
+	}
+
+	pub fn get_gears_path(&self, parent_path: &Path) -> PathBuf {
+		parent_path.join(&self.gears)
+	}
+
+	pub fn get_site_path(&self, parent_path: &Path) -> PathBuf {
+		parent_path.join(&self.site)
+	}
 }
 
 pub fn default_config_file_type() -> FileType {
@@ -131,11 +136,21 @@ pub fn get_config_path(dir_path: &Path, ext: &str) -> PathBuf {
 	target
 }
 
-pub fn create_config_file(config_path: &Path, config: &Config) -> Result<File, IOError> {
+pub fn create_config_file(
+	config_path: &Path,
+	config: &Config,
+	file_type: FileType,
+) -> Result<File, IOError> {
 	match new_empty_file(config_path) {
 		Ok(target_file) => {
-			let serialized_config = config.to_ron(None);
-			write_string(target_file, serialized_config)
+			if config.to_file(&target_file, file_type).is_ok() {
+				Ok(target_file)
+			} else {
+				Err(IOError::new(
+					std::io::ErrorKind::Other,
+					"configファイルの作成に失敗しました",
+				))
+			}
 		}
 		err => err,
 	}
@@ -144,9 +159,37 @@ pub fn create_config_file(config_path: &Path, config: &Config) -> Result<File, I
 pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IOError> {
 	match open_file_with_overwrite_mode(config_path) {
 		Ok(target_file) => {
-			let serialized_config = config.to_ron(None);
-			write_string(target_file, serialized_config)
+			if config.to_file(&target_file, FileType::Ron).is_ok() {
+				Ok(target_file)
+			} else {
+				Err(IOError::new(
+					std::io::ErrorKind::Other,
+					"configファイルの作成に失敗しました",
+				))
+			}
 		}
 		err => err,
+	}
+}
+
+pub fn find_config_from_dir_path(dir_path: &Path) -> Option<(Config, PathBuf)> {
+	for ext in FileType::VARIANTS.iter() {
+		let config_path = get_config_path(dir_path, ext);
+		if let Ok(true) = &config_path.try_exists() {
+			let file_type = FileType::from_str(ext).unwrap(); // 成功しないとおかしいのでunwrap
+			let file = open_file_with_read_mode(&config_path);
+			if let Ok(f) = file {
+				if let Ok(config) = Config::read(&f, file_type) {
+					return Some((config, config_path));
+				}
+			}
+		}
+	}
+
+	let parent = dir_path.parent();
+	if let Some(p) = parent {
+		find_config_from_dir_path(p)
+	} else {
+		None
 	}
 }
