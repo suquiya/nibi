@@ -5,7 +5,6 @@ use std::{
 	str::FromStr,
 };
 
-use hcl::value;
 use jiff::Timestamp;
 use ron::{
 	Map, Number, Value,
@@ -25,8 +24,8 @@ pub struct Ingot {
 	pub status: Status,
 	pub comment_status: CommentStatus,
 	pub modified: Timestamp,
-	pub tag: RKeyList,
-	pub category: RKeyList,
+	pub tags: RKeyList,
+	pub categories: RKeyList,
 	pub to: To,
 }
 
@@ -160,24 +159,26 @@ impl Ingot {
 			status: Status::default(),
 			comment_status: CommentStatus::default(),
 			modified: Timestamp::default(),
-			tag: RKeyList::default(),
-			category: RKeyList::default(),
+			tags: RKeyList::default(),
+			categories: RKeyList::default(),
 			to: To::default(),
 		}
 	}
 	pub fn parse<R: std::io::Read>(reader: R) -> Result<Ingot, ParseError> {
-		let mut parser = IngotParser::new();
+		let mut parser = IngotParser::default();
 		parser.parse(reader)
 	}
 }
 
+#[derive(Debug)]
 pub enum ParseError {
 	Invalid,
 	Empty,
 	IO(std::io::Error),
 }
 
-struct IngotParser {}
+#[derive(Default)]
+pub struct IngotParser {}
 
 macro_rules! set_if_some {
 	($res:ident,$key: ident, $expr: expr) => {{
@@ -189,10 +190,6 @@ macro_rules! set_if_some {
 }
 
 impl IngotParser {
-	pub fn new() -> Self {
-		Self {}
-	}
-
 	fn get_string_from_value(&mut self, value: Value) -> Option<String> {
 		match value {
 			Value::String(value) => Some(value),
@@ -213,27 +210,18 @@ impl IngotParser {
 	}
 
 	fn get_pathbuf_from_value(&mut self, value: Value) -> Option<PathBuf> {
-		match self.get_string_from_value(value) {
-			Some(value) => Some(PathBuf::from(value)),
-			_ => None,
-		}
+		self.get_string_from_value(value).map(PathBuf::from)
 	}
 
 	fn conv_map_to_string_key(&mut self, map: Map) -> BTreeMap<String, Value> {
 		map.into_iter()
-			.filter_map(|(k, v)| match self.get_string_from_value(k) {
-				Some(k) => Some((k, v)),
-				_ => None,
-			})
+			.filter_map(|(k, v)| self.get_string_from_value(k).map(|k| (k, v)))
 			.collect()
 	}
 
 	fn get_usize_from_value(&mut self, value: Value) -> Option<usize> {
 		match value {
-			Value::String(val) => match val.parse::<usize>() {
-				Ok(id) => Some(id),
-				Err(_) => None,
-			},
+			Value::String(val) => val.parse::<usize>().ok(),
 			Value::Number(num) => self.get_usize_from_value_number(num),
 			_ => None,
 		}
@@ -277,7 +265,7 @@ impl IngotParser {
 
 	fn set_from_key_value(&mut self, key: String, value: Value, result: &mut Ingot) -> bool {
 		match key.as_str() {
-			"id" => set_if_some!(result, id, self.get_usize_from_value(value)),
+			"ingot_id" => set_if_some!(result, id, self.get_usize_from_value(value)),
 			"author" => set_if_some!(result, author, self.get_usize_from_value(value)),
 			"pname" => set_if_some!(result, pname, self.get_string_from_value(value)),
 			"path" => set_if_some!(result, path, self.get_pathbuf_from_value(value)),
@@ -288,8 +276,8 @@ impl IngotParser {
 			"status" => set_if_some!(result, status, value.try_into().ok()),
 			"comment_status" => set_if_some!(result, comment_status, value.try_into().ok()),
 			"modified" => set_if_some!(result, modified, self.get_timestamp_from_value(value)),
-			"tag" => set_if_some!(result, tag, self.get_rkey_list_from_value(value)),
-			"category" => set_if_some!(result, category, self.get_rkey_list_from_value(value)),
+			"tags" => set_if_some!(result, tags, self.get_rkey_list_from_value(value)),
+			"categories" => set_if_some!(result, categories, self.get_rkey_list_from_value(value)),
 			"to" => set_if_some!(result, to, value.try_into().ok()),
 			_ => false,
 		}
@@ -306,7 +294,7 @@ impl IngotParser {
 	}
 
 	fn set_matter(&mut self, matter_lines: &Vec<&str>, result: &mut Ingot) -> bool {
-		let mut buffer = String::from("}");
+		let mut buffer = String::from("{\n");
 		for line in matter_lines {
 			let trim_end_line = line.trim_end();
 			if trim_end_line.ends_with(",") {
@@ -317,12 +305,22 @@ impl IngotParser {
 				buffer.push_str(",\n");
 			}
 		}
+		buffer.push('}');
+		println!("buffer: {}", buffer);
 		match ron::from_str(&buffer) {
 			Ok(Value::Map(m)) => {
+				println!("map: {:?}", m);
 				self.set_from_map(m, result);
 				true
 			}
-			_ => false,
+			Ok(val) => {
+				println!("val: {:?}", val);
+				false
+			}
+			Err(e) => {
+				println!("err: {:?}", e);
+				false
+			}
 		}
 	}
 
