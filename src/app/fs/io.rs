@@ -44,6 +44,14 @@ pub fn read_all(path: &Path) -> Result<String, Error> {
 	fs::read_to_string(path)
 }
 
+pub fn read_all_from_reader<R: Read>(mut reader: R) -> Result<String, Error> {
+	let mut buf = String::new();
+	match reader.read_to_string(&mut buf) {
+		Ok(_) => Ok(buf),
+		Err(err) => Err(err),
+	}
+}
+
 pub fn read_all_byte(mut file: &File) -> Result<(usize, Vec<u8>), Error> {
 	let mut buf = Vec::new();
 	match file.read_to_end(&mut buf) {

@@ -1,15 +1,8 @@
-use std::{
-	collections::{BTreeMap, VecDeque},
-	io::{self, Read},
-	path::PathBuf,
-	str::FromStr,
-};
+use std::{collections::BTreeMap, io::Read, path::PathBuf, str::FromStr};
 
 use jiff::Timestamp;
-use ron::{
-	Map, Number, Value,
-	value::{F32, F64},
-};
+
+use super::fs::io::read_all_from_reader;
 
 #[derive(Debug, Default)]
 pub struct Ingot {
@@ -73,16 +66,6 @@ impl FromStr for Status {
 	}
 }
 
-impl TryFrom<Value> for Status {
-	type Error = ParseError;
-	fn try_from(value: Value) -> Result<Self, ParseError> {
-		match value {
-			Value::String(s) => Status::from_str(&s),
-			_ => Err(ParseError::Invalid),
-		}
-	}
-}
-
 #[derive(Debug, Default)]
 pub enum To {
 	#[default]
@@ -108,16 +91,6 @@ impl FromStr for To {
 	}
 }
 
-impl TryFrom<Value> for To {
-	type Error = ParseError;
-	fn try_from(value: Value) -> Result<Self, ParseError> {
-		match value {
-			Value::String(s) => To::from_str(&s),
-			_ => Err(ParseError::Invalid),
-		}
-	}
-}
-
 #[derive(Debug, Default)]
 pub enum CommentStatus {
 	Open,
@@ -131,16 +104,6 @@ impl FromStr for CommentStatus {
 		match s {
 			"open" => Ok(CommentStatus::Open),
 			_ => Ok(CommentStatus::Close),
-		}
-	}
-}
-
-impl TryFrom<Value> for CommentStatus {
-	type Error = ParseError;
-	fn try_from(value: Value) -> Result<Self, ParseError> {
-		match value {
-			Value::String(s) => CommentStatus::from_str(&s),
-			_ => Err(ParseError::Invalid),
 		}
 	}
 }
@@ -165,8 +128,7 @@ impl Ingot {
 		}
 	}
 	pub fn parse<R: std::io::Read>(reader: R) -> Result<Ingot, ParseError> {
-		let mut parser = IngotParser::default();
-		parser.parse(reader)
+		IngotParser::parse(reader)
 	}
 }
 
@@ -177,238 +139,457 @@ pub enum ParseError {
 	IO(std::io::Error),
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Sep {
+	Comma,
+	Colon,
+	WhiteSpaces(String),
+	NewLine,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BracketRole {
+	Start,
+	End,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Bracket {
+	Curly,
+	Square,
+	Angle,
+	Normal,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Quote {
+	Single,
+	Double,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommentMark {
+	LineBegin,
+	BlockBegin,
+	BlockEnd,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RawToken {
+	Quote(Quote),
+	SimpleString(String),
+	Sep(Sep),
+	Bracket(BracketRole, Bracket),
+	Comment(CommentMark),
+	Eos,
+}
+
+type RawTokenData = (usize, RawToken);
+
+#[derive(Debug)]
+pub enum BlockToken {
+	QuotedString(Quote, String),
+	UnquotedString(String),
+	Array(Vec<TokenNode>),
+	Map(BTreeMap<String, TokenNode>),
+	Comment(String),
+	KeyPair(String, Vec<TokenNode>),
+}
+
+// 行番号などもう少し複雑な処理が必要になる場合に備えてstructにしておく
+#[derive(Debug)]
+pub struct Pos {
+	start: usize,
+}
+
+impl Pos {
+	pub fn new(start: usize) -> Pos {
+		Pos { start }
+	}
+
+	pub fn start(&self) -> &usize {
+		&self.start
+	}
+
+	pub fn mut_start(&mut self) -> &mut usize {
+		&mut self.start
+	}
+}
+
+#[derive(Debug)]
+pub struct TokenNode {
+	pub pos: Pos,
+	pub token: BlockToken,
+}
+
+impl TokenNode {
+	pub fn new(pos: Pos, token: BlockToken) -> TokenNode {
+		TokenNode { pos, token }
+	}
+}
+
+#[derive(Debug)]
+pub struct IngotTokenizer {
+	chars: Vec<char>,
+	pub pos: usize,
+}
+
+const SYMBOL_CHARS: &str = "{}[]()<>,;: \t\n\r\"'/";
+
+impl IngotTokenizer {
+	/// constructor
+	pub fn new(string: String) -> IngotTokenizer {
+		let chars = string.chars().collect();
+		IngotTokenizer { chars, pos: 0 }
+	}
+
+	/// returns next char
+	pub fn next_char(&mut self) -> Option<char> {
+		let result = self.peek_next_char().copied();
+		self.pos += 1;
+		result
+	}
+
+	/// returns next char without move position
+	pub fn peek_next_char(&self) -> Option<&char> {
+		self.chars.get(self.pos)
+	}
+
+	/// backs position
+	pub fn pos_back(&mut self) {
+		self.pos -= 1;
+	}
+
+	/// moves position
+	pub fn pos_next(&mut self) {
+		self.pos += 1;
+	}
+
+	pub fn is_symbol_char(c: char) -> bool {
+		SYMBOL_CHARS.contains(c)
+	}
+
+	fn tokenize_new_line(&mut self) -> RawToken {
+		let next = self.peek_next_char();
+		match next {
+			Some('\n') => {
+				self.pos_next();
+				RawToken::Sep(Sep::NewLine)
+			}
+			Some(_c) => RawToken::Sep(Sep::NewLine),
+			None => RawToken::Sep(Sep::NewLine),
+		}
+	}
+
+	fn tokenize_whitespaces(&mut self, first_char: char) -> RawToken {
+		let mut result = String::from(first_char);
+		loop {
+			let next = self.peek_next_char();
+			match next {
+				Some(c) => {
+					let c = *c;
+					if c == ' ' {
+						result.push(c);
+						self.pos_next();
+					} else if c == '\t' {
+						result.push(c);
+						self.pos_next();
+					} else {
+						break;
+					}
+				}
+				_ => break,
+			}
+		}
+
+		RawToken::Sep(Sep::WhiteSpaces(result))
+	}
+
+	fn tokenize_after_slash(&mut self) -> RawToken {
+		let next = self.peek_next_char();
+		match next {
+			Some('/') => {
+				self.pos_next();
+				RawToken::Comment(CommentMark::LineBegin)
+			}
+			Some('*') => {
+				self.pos_next();
+				RawToken::Comment(CommentMark::BlockBegin)
+			}
+			_ => RawToken::SimpleString('/'.to_string()),
+		}
+	}
+
+	fn tokenize_after_asterisk(&mut self) -> RawToken {
+		let next = self.peek_next_char();
+		match next {
+			Some('/') => {
+				self.pos_next();
+				RawToken::Comment(CommentMark::BlockEnd)
+			}
+			_ => RawToken::SimpleString('*'.to_string()),
+		}
+	}
+
+	fn tokenize_string(&mut self, first_char: char) -> RawToken {
+		let mut result = String::from(first_char);
+		if first_char == '\\' {
+			if let Some(nc) = self.peek_next_char() {
+				result.push(*nc);
+				self.pos_next();
+			}
+		}
+
+		loop {
+			let next = self.peek_next_char();
+			match next {
+				Some(c) => {
+					let c = *c;
+					if SYMBOL_CHARS.contains(c) {
+						break;
+					} else if c == '\\' {
+						result.push(c);
+						self.pos_next();
+						match self.peek_next_char() {
+							Some(nc) => {
+								result.push(*nc);
+								self.pos_next();
+							}
+							_ => break,
+						}
+					} else if c == '*' {
+						match self.peek_next_char() {
+							Some('/') => {
+								break;
+							}
+							Some(nc) => {
+								result.push(c);
+								result.push(*nc);
+								self.pos += 2;
+							}
+							None => {
+								break;
+							}
+						}
+					} else {
+						result.push(c);
+						self.pos_next();
+					}
+				}
+				_ => break,
+			}
+		}
+		RawToken::SimpleString(result)
+	}
+
+	pub fn next_raw_token(&mut self) -> RawTokenData {
+		let pos = self.pos;
+		let next_char = self.next_char();
+		let token: RawToken = if let Some(c) = next_char {
+			match c {
+				'\'' => RawToken::Quote(Quote::Single),
+				'"' => RawToken::Quote(Quote::Double),
+				',' => RawToken::Sep(Sep::Comma),
+				':' => RawToken::Sep(Sep::Colon),
+				'\n' => RawToken::Sep(Sep::NewLine),
+				'\r' => self.tokenize_new_line(),
+				' ' => self.tokenize_whitespaces(' '),
+				'\t' => self.tokenize_whitespaces('\t'),
+				'[' => RawToken::Bracket(BracketRole::Start, Bracket::Square),
+				']' => RawToken::Bracket(BracketRole::End, Bracket::Square),
+				'{' => RawToken::Bracket(BracketRole::Start, Bracket::Curly),
+				'}' => RawToken::Bracket(BracketRole::End, Bracket::Curly),
+				'(' => RawToken::Bracket(BracketRole::Start, Bracket::Normal),
+				')' => RawToken::Bracket(BracketRole::End, Bracket::Normal),
+				'<' => RawToken::Bracket(BracketRole::Start, Bracket::Angle),
+				'>' => RawToken::Bracket(BracketRole::End, Bracket::Angle),
+				'/' => self.tokenize_after_slash(),
+				'*' => self.tokenize_after_asterisk(),
+				_ => self.tokenize_string(c),
+			}
+		} else {
+			RawToken::Eos
+		};
+
+		(pos, token)
+	}
+
+	pub fn get_rest_all(&mut self) -> String {
+		if self.chars.len() > self.pos {
+			self.chars[self.pos..].iter().collect()
+		} else {
+			String::new()
+		}
+	}
+}
+
+#[derive(Debug)]
 pub struct IngotParser {}
 
-macro_rules! set_if_some {
-	($res:ident,$key: ident, $expr: expr) => {{
-		if let Some($key) = $expr {
-			$res.$key = $key;
-		};
-		true
-	}};
+pub struct IngotMatterTokenParser {
+	pub raw_tokens: Vec<RawTokenData>,
+	pub pos: usize,
+}
+
+impl IngotMatterTokenParser {
+	pub fn new(raw_tokens: Vec<RawTokenData>) -> IngotMatterTokenParser {
+		IngotMatterTokenParser { raw_tokens, pos: 0 }
+	}
+
+	pub fn peek_next_token(&self) -> Option<&RawTokenData> {
+		self.raw_tokens.get(self.pos)
+	}
+
+	pub fn next_token(&mut self) -> Option<RawTokenData> {
+		let result = self.peek_next_token().cloned();
+		self.pos += 1;
+		result
+	}
+
+	pub fn pos_next(&mut self) {
+		self.pos += 1;
+	}
+
+	pub fn seek_until_nl(&mut self)-> Vec<RawTokenData>{
+		let mut result = Vec::new();
+		loop {
+			let next_token = self.peek_next_token();
+			if let Some((pos, token)) = next_token {
+				if let RawToken::Sep(Sep::NewLine) = token {
+					break;
+				}
+				if let RawToken::Eos = token {
+					break;
+				}
+				result.push((*pos, token.clone()));
+				self.pos_next();
+			}else{
+				break;
+			}
+		}
+		result
+	}
+
+	pub fn parse_quoted_block(&mut self, pos: usize, quote: Quote) -> TokenNode {
+		let mut result = String::new();
+		loop {
+			let next_token = self.peek_next_token();
+			if let Some((_, token)) = next_token {}
+		}
+	}
+
+	pub fn parse_simple_string(&mut self, pos: usize, s: String) -> TokenNode {}
+
+	pub fn parse_comment_part(&mut self, pos: usize, mark: CommentMark) -> TokenNode {
+		match mark {
+			CommentMark::LineBegin =>{
+
+			}
+		}
+	}
+
+	pub fn parse_sep(&mut self, _pos: usize, _sep: Sep) -> Option<TokenNode> {
+		// 何か追加であったとき用メソッド　マター解析時は基本読み飛ばし
+		self.next_token_node()
+	}
+
+	pub fn next_token_node(&mut self) -> Option<TokenNode> {
+		let next_token = self.next_token();
+		if let Some((pos, token)) = next_token {
+			match token {
+				RawToken::Eos => None,
+				RawToken::Quote(q) => Some(self.parse_quoted_block(pos, q)),
+				RawToken::SimpleString(s) => Some(self.parse_simple_string(pos, s)),
+				RawToken::Comment(mark) => Some(self.parse_comment_part(pos, mark)),
+				RawToken::Sep(sep) => ,
+				RawToken::Bracket(bracket_role, bracket) => todo!(),
+			}
+		} else {
+			None
+		}
+	}
 }
 
 impl IngotParser {
-	fn get_string_from_value(&mut self, value: Value) -> Option<String> {
-		match value {
-			Value::String(value) => Some(value),
-			Value::Number(value) => match value {
-				Number::F32(F32(value)) => Some(value.to_string()),
-				Number::F64(F64(value)) => Some(value.to_string()),
-				Number::U8(value) => Some(value.to_string()),
-				Number::U16(value) => Some(value.to_string()),
-				Number::U32(value) => Some(value.to_string()),
-				Number::U64(value) => Some(value.to_string()),
-				Number::I8(value) => Some(value.to_string()),
-				Number::I16(value) => Some(value.to_string()),
-				Number::I32(value) => Some(value.to_string()),
-				Number::I64(value) => Some(value.to_string()),
-			},
-			_ => None,
-		}
-	}
+	pub fn parse<R: Read>(mut reader: R) -> Result<Ingot, ParseError> {
+		let mut buffer = read_all_from_reader(reader).map_err(ParseError::IO)?;
 
-	fn get_pathbuf_from_value(&mut self, value: Value) -> Option<PathBuf> {
-		self.get_string_from_value(value).map(PathBuf::from)
-	}
-
-	fn conv_map_to_string_key(&mut self, map: Map) -> BTreeMap<String, Value> {
-		map.into_iter()
-			.filter_map(|(k, v)| self.get_string_from_value(k).map(|k| (k, v)))
-			.collect()
-	}
-
-	fn get_usize_from_value(&mut self, value: Value) -> Option<usize> {
-		match value {
-			Value::String(val) => val.parse::<usize>().ok(),
-			Value::Number(num) => self.get_usize_from_value_number(num),
-			_ => None,
-		}
-	}
-
-	fn get_usize_from_value_number(&mut self, value: Number) -> Option<usize> {
-		match value {
-			Number::U8(k) => Some(k.into()),
-			Number::U16(k) => Some(k.into()),
-			Number::U32(k) => k.try_into().ok(),
-			Number::U64(k) => k.try_into().ok(),
-			Number::I8(k) => k.try_into().ok(),
-			Number::I16(k) => k.try_into().ok(),
-			Number::I32(k) => k.try_into().ok(),
-			Number::I64(k) => k.try_into().ok(),
-			_ => None,
-		}
-	}
-
-	fn get_timestamp_from_value(&mut self, value: Value) -> Option<Timestamp> {
-		self
-			.get_string_from_value(value)
-			.and_then(|value| value.parse().ok())
-	}
-
-	fn get_rkey_list_from_value(&mut self, value: Value) -> Option<RKeyList> {
-		match value {
-			Value::Seq(list) => {
-				let l: Vec<RKeyRaw> = list
-					.into_iter()
-					.filter_map(|v| match self.get_usize_from_value(v.clone()) {
-						Some(id) => Some(RKeyRaw::Usize(id)),
-						_ => self.get_string_from_value(v).map(RKeyRaw::String),
-					})
-					.collect();
-				Some(RKeyList::Raw(l))
-			}
-			_ => None,
-		}
-	}
-
-	fn set_from_key_value(&mut self, key: String, value: Value, result: &mut Ingot) -> bool {
-		match key.as_str() {
-			"ingot_id" => set_if_some!(result, id, self.get_usize_from_value(value)),
-			"author" => set_if_some!(result, author, self.get_usize_from_value(value)),
-			"pname" => set_if_some!(result, pname, self.get_string_from_value(value)),
-			"path" => set_if_some!(result, path, self.get_pathbuf_from_value(value)),
-			"published" => set_if_some!(result, published, self.get_timestamp_from_value(value)),
-			"content" => set_if_some!(result, content, self.get_string_from_value(value)),
-			"title" => set_if_some!(result, title, self.get_string_from_value(value)),
-			"excerpt" => set_if_some!(result, excerpt, self.get_string_from_value(value)),
-			"status" => set_if_some!(result, status, value.try_into().ok()),
-			"comment_status" => set_if_some!(result, comment_status, value.try_into().ok()),
-			"modified" => set_if_some!(result, modified, self.get_timestamp_from_value(value)),
-			"tags" => set_if_some!(result, tags, self.get_rkey_list_from_value(value)),
-			"categories" => set_if_some!(result, categories, self.get_rkey_list_from_value(value)),
-			"to" => set_if_some!(result, to, value.try_into().ok()),
-			_ => false,
-		}
-	}
-
-	fn set_from_map(&mut self, map: Map, result: &mut Ingot) -> bool {
-		let map = self.conv_map_to_string_key(map);
-		let mut hit = false;
-		for (k, v) in map {
-			let r = self.set_from_key_value(k, v, result);
-			hit = hit || r;
-		}
-		hit
-	}
-
-	fn set_matter(&mut self, matter_lines: &Vec<&str>, result: &mut Ingot) -> bool {
-		let mut buffer = String::from("{\n");
-		for line in matter_lines {
-			let trim_end_line = line.trim_end();
-			if trim_end_line.ends_with(",") {
-				buffer.push_str(trim_end_line);
-				buffer.push('\n');
-			} else {
-				buffer.push_str(trim_end_line);
-				buffer.push_str(",\n");
-			}
-		}
-		buffer.push('}');
-		println!("buffer: {}", buffer);
-		match ron::from_str(&buffer) {
-			Ok(Value::Map(m)) => {
-				println!("map: {:?}", m);
-				self.set_from_map(m, result);
-				true
-			}
-			Ok(val) => {
-				println!("val: {:?}", val);
-				false
-			}
-			Err(e) => {
-				println!("err: {:?}", e);
-				false
-			}
-		}
-	}
-
-	fn seek_to_first_not_empty_line<'a>(
-		&mut self,
-		lines: &mut VecDeque<&'a str>,
-	) -> Option<&'a str> {
-		while let Some(line) = lines.pop_front() {
-			if line.is_empty() {
-				continue;
-			}
-			return Some(line);
-		}
-		None
-	}
-
-	fn get_content_from_lines(&mut self, lines: VecDeque<&str>) -> String {
-		lines.into_iter().collect::<Vec<&str>>().join("\n")
-	}
-
-	pub fn parse<R: Read>(&mut self, mut reader: R) -> Result<Ingot, ParseError> {
 		let mut result = Ingot::default();
+		let mut tokenizer = IngotTokenizer::new(buffer);
 
-		let mut buffer = String::new();
-		reader.read_to_string(&mut buffer).map_err(ParseError::IO)?;
-
-		let mut lines: VecDeque<&str> = buffer.lines().collect();
-
-		let mut front_matter_lines: Vec<&str> = Vec::new();
-
-		while let Some(line) = lines.pop_front() {
-			if line.is_empty() {
-				break;
-			}
-			front_matter_lines.push(line);
-		}
-
-		if !self.set_matter(&front_matter_lines, &mut result) {
-			let mut queue = VecDeque::from(front_matter_lines);
-			queue.append(&mut lines);
-			lines = queue;
-		}
-
-		let mut back_matter_lines: Vec<&str> = Vec::new();
-
-		let mut prev_is_empty = false;
-		while let Some(line) = lines.pop_back() {
-			if line.is_empty() {
-				if prev_is_empty {
-					break;
-				}
-				prev_is_empty = true;
-				continue;
-			}
-			prev_is_empty = false;
-			back_matter_lines.push(line);
-		}
-
-		if !self.set_matter(&back_matter_lines, &mut result) {
-			lines.append(&mut VecDeque::from(back_matter_lines));
-		}
-
-		let fline = self.seek_to_first_not_empty_line(&mut lines);
-
-		match fline {
-			None => Ok(result),
-			Some(fline) => {
-				if result.title.is_empty() {
-					let next_line = lines.pop_front();
-					match next_line {
-						None => {
-							result.title = fline.to_string();
-						}
-						Some(line) if line.trim().is_empty() => {
-							result.title = fline.to_string();
-						}
-						Some(nl) => {
-							lines.push_front(nl);
-							lines.push_front(fline);
-						}
+		// フロントマターを分離する
+		let mut front_matter_tokens: Vec<RawTokenData> = Vec::new();
+		let mut prev_nl = false;
+		loop {
+			let (pos, token) = tokenizer.next_raw_token();
+			match token {
+				RawToken::Eos => break,
+				RawToken::Sep(Sep::NewLine) => {
+					if prev_nl {
+						break;
 					}
-					result.content = self.get_content_from_lines(lines);
-					Ok(result)
-				} else {
-					result.content = self.get_content_from_lines(lines);
-					Ok(result)
+					front_matter_tokens.push((pos, token));
+					prev_nl = true;
+				}
+				_ => {
+					front_matter_tokens.push((pos, token));
+					prev_nl = false;
 				}
 			}
 		}
+
+		buffer = tokenizer.get_rest_all();
+
+		println!("front_matter: {:#?}", front_matter_tokens);
+		println!("buffer: {:#?}", buffer);
+
+		Ok(result)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_raw_tokenize_basic() {
+		let mut tokenizer = IngotTokenizer::new("aaa:bbb".to_string());
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 0);
+		assert_eq!(token, RawToken::SimpleString("aaa".to_string()));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 3);
+		assert_eq!(token, RawToken::Sep(Sep::Colon));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 4);
+		assert_eq!(token, RawToken::SimpleString("bbb".to_string()));
+	}
+
+	#[test]
+	fn test_raw_tokenize_bracket() {
+		let mut tokenizer = IngotTokenizer::new("aaa: {bbb: ccc}".to_string());
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 0);
+		assert_eq!(token, RawToken::SimpleString("aaa".to_string()));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 3);
+		assert_eq!(token, RawToken::Sep(Sep::Colon));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 4);
+		assert_eq!(token, RawToken::Sep(Sep::WhiteSpaces(" ".to_string())));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 5);
+		assert_eq!(token, RawToken::Bracket(BracketRole::Start, Bracket::Curly));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 6);
+		assert_eq!(token, RawToken::SimpleString("bbb".to_string()));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 9);
+		assert_eq!(token, RawToken::Sep(Sep::Colon));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 10);
+		assert_eq!(token, RawToken::Sep(Sep::WhiteSpaces(" ".to_string())));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 11);
+		assert_eq!(token, RawToken::SimpleString("ccc".to_string()));
+		let (pos, token) = tokenizer.next_raw_token();
+		assert_eq!(pos, 14);
+		assert_eq!(token, RawToken::Bracket(BracketRole::End, Bracket::Curly));
 	}
 }
