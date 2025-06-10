@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, io::Read, path::PathBuf, str::FromStr};
 
+use hcl::Block;
 use jiff::Timestamp;
 
 use super::fs::io::read_all_from_reader;
@@ -86,7 +87,7 @@ impl FromStr for To {
 			"article" => Ok(To::Article),
 			"top" => Ok(To::Top),
 			"asis" => Ok(To::AsIs),
-			_ => Ok(To::Custom(s.to_string())),
+			_ => Ok(To::Custom(s.to_ascii_lowercase().to_string())),
 		}
 	}
 }
@@ -147,22 +148,87 @@ pub enum Sep {
 	NewLine,
 }
 
+impl Sep {
+	pub fn get_as_string(&self) -> String {
+		match self {
+			Sep::Comma => ",".to_string(),
+			Sep::Colon => ":".to_string(),
+			Sep::WhiteSpaces(s) => s.clone(),
+			Sep::NewLine => "\n".to_string(),
+		}
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BracketRole {
 	Start,
 	End,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Bracket {
+pub enum BracketType {
 	Curly,
 	Square,
 	Angle,
 	Normal,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bracket {
+	pub role: BracketRole,
+	pub bracket_type: BracketType,
+}
+
+impl From<(BracketRole, BracketType)> for Bracket {
+	fn from(value: (BracketRole, BracketType)) -> Self {
+		Bracket {
+			role: value.0,
+			bracket_type: value.1,
+		}
+	}
+}
+
+impl Bracket {
+	pub fn new(role: BracketRole, bracket: BracketType) -> Self {
+		Self {
+			role,
+			bracket_type: bracket,
+		}
+	}
+
+	pub fn get_as_char(&self) -> char {
+		match (&self.role, &self.bracket_type) {
+			(BracketRole::Start, BracketType::Curly) => '{',
+			(BracketRole::End, BracketType::Curly) => '}',
+			(BracketRole::Start, BracketType::Square) => '[',
+			(BracketRole::End, BracketType::Square) => ']',
+			(BracketRole::Start, BracketType::Angle) => '<',
+			(BracketRole::End, BracketType::Angle) => '>',
+			(BracketRole::Start, BracketType::Normal) => '(',
+			(BracketRole::End, BracketType::Normal) => ')',
+		}
+	}
+
+	pub fn get_role(&self) -> &BracketRole {
+		&self.role
+	}
+
+	pub fn get_type(&self) -> &BracketType {
+		&self.bracket_type
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Quote {
 	Single,
 	Double,
+}
+
+impl Quote {
+	pub fn get_as_char(&self) -> char {
+		match self {
+			Quote::Single => '\'',
+			Quote::Double => '"',
+		}
+	}
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommentMark {
@@ -170,14 +236,38 @@ pub enum CommentMark {
 	BlockBegin,
 	BlockEnd,
 }
+
+impl CommentMark {
+	pub fn get_as_string(&self) -> String {
+		match self {
+			CommentMark::LineBegin => "//".to_string(),
+			CommentMark::BlockBegin => "/*".to_string(),
+			CommentMark::BlockEnd => "*/".to_string(),
+		}
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RawToken {
 	Quote(Quote),
 	SimpleString(String),
 	Sep(Sep),
-	Bracket(BracketRole, Bracket),
+	Bracket(Bracket),
 	Comment(CommentMark),
 	Eos,
+}
+
+impl RawToken {
+	pub fn get_as_string(&self) -> String {
+		match self {
+			RawToken::SimpleString(s) => s.clone(),
+			RawToken::Quote(q) => q.get_as_char().to_string(),
+			RawToken::Sep(s) => s.get_as_string(),
+			RawToken::Bracket(bracket) => bracket.get_as_char().to_string(),
+			RawToken::Comment(mark) => mark.get_as_string(),
+			RawToken::Eos => "".to_string(),
+		}
+	}
 }
 
 type RawTokenData = (usize, RawToken);
@@ -189,13 +279,19 @@ pub enum BlockToken {
 	Array(Vec<TokenNode>),
 	Map(BTreeMap<String, TokenNode>),
 	Comment(String),
-	KeyPair(String, Vec<TokenNode>),
+	KeyValue(String, Box<Option<TokenNode>>),
 }
 
 // 行番号などもう少し複雑な処理が必要になる場合に備えてstructにしておく
 #[derive(Debug)]
 pub struct Pos {
 	start: usize,
+}
+
+impl From<usize> for Pos {
+	fn from(value: usize) -> Self {
+		Self { start: value }
+	}
 }
 
 impl Pos {
@@ -219,8 +315,11 @@ pub struct TokenNode {
 }
 
 impl TokenNode {
-	pub fn new(pos: Pos, token: BlockToken) -> TokenNode {
-		TokenNode { pos, token }
+	pub fn new<T: Into<Pos>>(pos: T, token: BlockToken) -> TokenNode {
+		TokenNode {
+			pos: pos.into(),
+			token,
+		}
 	}
 }
 
@@ -284,10 +383,7 @@ impl IngotTokenizer {
 			match next {
 				Some(c) => {
 					let c = *c;
-					if c == ' ' {
-						result.push(c);
-						self.pos_next();
-					} else if c == '\t' {
+					if c == ' ' || c == '\t' {
 						result.push(c);
 						self.pos_next();
 					} else {
@@ -391,14 +487,14 @@ impl IngotTokenizer {
 				'\r' => self.tokenize_new_line(),
 				' ' => self.tokenize_whitespaces(' '),
 				'\t' => self.tokenize_whitespaces('\t'),
-				'[' => RawToken::Bracket(BracketRole::Start, Bracket::Square),
-				']' => RawToken::Bracket(BracketRole::End, Bracket::Square),
-				'{' => RawToken::Bracket(BracketRole::Start, Bracket::Curly),
-				'}' => RawToken::Bracket(BracketRole::End, Bracket::Curly),
-				'(' => RawToken::Bracket(BracketRole::Start, Bracket::Normal),
-				')' => RawToken::Bracket(BracketRole::End, Bracket::Normal),
-				'<' => RawToken::Bracket(BracketRole::Start, Bracket::Angle),
-				'>' => RawToken::Bracket(BracketRole::End, Bracket::Angle),
+				'[' => RawToken::Bracket(Bracket::new(BracketRole::Start, BracketType::Square)),
+				']' => RawToken::Bracket(Bracket::new(BracketRole::End, BracketType::Square)),
+				'{' => RawToken::Bracket(Bracket::new(BracketRole::Start, BracketType::Curly)),
+				'}' => RawToken::Bracket(Bracket::new(BracketRole::End, BracketType::Curly)),
+				'(' => RawToken::Bracket(Bracket::new(BracketRole::Start, BracketType::Normal)),
+				')' => RawToken::Bracket(Bracket::new(BracketRole::End, BracketType::Normal)),
+				'<' => RawToken::Bracket(Bracket::new(BracketRole::Start, BracketType::Angle)),
+				'>' => RawToken::Bracket(Bracket::new(BracketRole::End, BracketType::Angle)),
 				'/' => self.tokenize_after_slash(),
 				'*' => self.tokenize_after_asterisk(),
 				_ => self.tokenize_string(c),
@@ -446,20 +542,22 @@ impl IngotMatterTokenParser {
 		self.pos += 1;
 	}
 
-	pub fn seek_until_nl(&mut self)-> Vec<RawTokenData>{
-		let mut result = Vec::new();
+	pub fn pos_back(&mut self) {
+		self.pos -= 1;
+	}
+
+	pub fn seek_and_get_string_until(&mut self, stop_tokens: Vec<RawToken>) -> String {
+		let mut result = String::new();
 		loop {
 			let next_token = self.peek_next_token();
-			if let Some((pos, token)) = next_token {
-				if let RawToken::Sep(Sep::NewLine) = token {
+			if let Some((_, token)) = next_token {
+				if stop_tokens.contains(token) || token == &RawToken::Eos {
 					break;
 				}
-				if let RawToken::Eos = token {
-					break;
-				}
-				result.push((*pos, token.clone()));
+				let s = token.get_as_string();
+				result.push_str(&s);
 				self.pos_next();
-			}else{
+			} else {
 				break;
 			}
 		}
@@ -467,26 +565,142 @@ impl IngotMatterTokenParser {
 	}
 
 	pub fn parse_quoted_block(&mut self, pos: usize, quote: Quote) -> TokenNode {
-		let mut result = String::new();
+		let content = self.seek_and_get_string_until(vec![
+			RawToken::Quote(quote.clone()),
+			RawToken::Sep(Sep::NewLine),
+		]);
+
+		let mut next_token = self.peek_next_token();
+
+		if let Some((_, RawToken::Quote(q))) = next_token {
+			if q == &quote {
+				self.pos_next();
+				next_token = self.peek_next_token();
+			}
+		}
+
+		match next_token {
+			Some((_, RawToken::Sep(Sep::NewLine))) => {
+				self.pos_next();
+			}
+			Some((_, RawToken::Sep(Sep::Colon))) => {
+				self.pos_next();
+				return self.parse_key_value(pos, content);
+			}
+			_ => (),
+		}
+		TokenNode::new(pos, BlockToken::QuotedString(quote, content))
+	}
+
+	fn parse_key_value(&mut self, pos: usize, key: String) -> TokenNode {
+		let value = self.next_token_node();
+		TokenNode::new(
+			pos,
+			BlockToken::KeyValue(
+				key,
+				match value {
+					Some(v) => Box::new(Some(v)),
+					_ => Box::new(None),
+				},
+			),
+		)
+	}
+
+	pub fn parse_simple_string(&mut self, pos: usize, s: String) -> TokenNode {
+		let mut content = s;
+		let mut next_colon = false;
 		loop {
 			let next_token = self.peek_next_token();
-			if let Some((_, token)) = next_token {}
+			if let Some((_, token)) = next_token {
+				match token {
+					RawToken::SimpleString(s) => {
+						content.push_str(s);
+						self.pos_next();
+					}
+					RawToken::Sep(Sep::WhiteSpaces(s)) => {
+						content.push_str(s);
+						self.pos_next();
+					}
+					RawToken::Sep(sep) => {
+						next_colon = sep == &Sep::Colon;
+						self.pos_next();
+						break;
+					}
+					_ => break,
+				}
+			} else {
+				break;
+			}
+		}
+
+		if next_colon {
+			self.parse_key_value(pos, content)
+		} else {
+			TokenNode::new(pos, BlockToken::UnquotedString(content))
 		}
 	}
 
-	pub fn parse_simple_string(&mut self, pos: usize, s: String) -> TokenNode {}
-
 	pub fn parse_comment_part(&mut self, pos: usize, mark: CommentMark) -> TokenNode {
 		match mark {
-			CommentMark::LineBegin =>{
-
+			CommentMark::LineBegin => {
+				let comment = self.seek_and_get_string_until(vec![RawToken::Sep(Sep::NewLine)]);
+				TokenNode::new(pos, BlockToken::Comment(comment))
 			}
+			CommentMark::BlockBegin => {
+				let comment =
+					self.seek_and_get_string_until(vec![RawToken::Comment(CommentMark::BlockEnd)]);
+				TokenNode::new(pos, BlockToken::Comment(comment))
+			}
+			CommentMark::BlockEnd => self.parse_simple_string(pos, String::from("*/")),
 		}
 	}
 
 	pub fn parse_sep(&mut self, _pos: usize, _sep: Sep) -> Option<TokenNode> {
-		// 何か追加であったとき用メソッド　マター解析時は基本読み飛ばし
+		// 何か追加であったとき用メソッド、マター解析時は基本読み飛ばし
 		self.next_token_node()
+	}
+
+	pub fn parse_bracket(&mut self, pos: usize, bracket: Bracket) -> Option<TokenNode> {
+		if bracket.role == BracketRole::End {
+			// いきなり閉じる括弧はスキップ
+			return self.next_token_node();
+		};
+
+		let mut content: Vec<TokenNode> = Vec::new();
+		loop {
+			let next = self.peek_next_token().cloned();
+			println!("next: {:#?}", next);
+			match next {
+				Some((pos, token)) => match token {
+					RawToken::Bracket(bracket2) => {
+						self.pos_next();
+						if bracket2.role == BracketRole::End {
+							break;
+						}
+						let bracket_parse = self.parse_bracket(pos, bracket2);
+						match bracket_parse {
+							Some(v) => content.push(v),
+							_ => break,
+						}
+					}
+					RawToken::Eos => {
+						break;
+					}
+					_ => {
+						let node = self.next_token_node();
+						match node {
+							Some(v) => content.push(v),
+							_ => break,
+						}
+					}
+				},
+				None => {
+					break;
+				}
+			};
+		}
+
+		Some(TokenNode::new(pos, BlockToken::Array(content)))
 	}
 
 	pub fn next_token_node(&mut self) -> Option<TokenNode> {
@@ -497,8 +711,8 @@ impl IngotMatterTokenParser {
 				RawToken::Quote(q) => Some(self.parse_quoted_block(pos, q)),
 				RawToken::SimpleString(s) => Some(self.parse_simple_string(pos, s)),
 				RawToken::Comment(mark) => Some(self.parse_comment_part(pos, mark)),
-				RawToken::Sep(sep) => ,
-				RawToken::Bracket(bracket_role, bracket) => todo!(),
+				RawToken::Sep(sep) => self.parse_sep(pos, sep),
+				RawToken::Bracket(bracket) => self.parse_bracket(pos, bracket),
 			}
 		} else {
 			None
@@ -507,6 +721,19 @@ impl IngotMatterTokenParser {
 }
 
 impl IngotParser {
+	pub fn set_from_key_value(
+		&mut self,
+		result: &mut Ingot,
+		key: String,
+		value: Box<Option<TokenNode>>,
+	) {
+		if let Some(v) = *value {
+			let token = v.token;
+			match key.as_str() {
+				"tags" => {}
+			}
+		}
+	}
 	pub fn parse<R: Read>(mut reader: R) -> Result<Ingot, ParseError> {
 		let mut buffer = read_all_from_reader(reader).map_err(ParseError::IO)?;
 
@@ -536,8 +763,18 @@ impl IngotParser {
 
 		buffer = tokenizer.get_rest_all();
 
-		println!("front_matter: {:#?}", front_matter_tokens);
-		println!("buffer: {:#?}", buffer);
+		// println!("front_matter: {:#?}", front_matter_tokens);
+
+		let mut parser = IngotMatterTokenParser::new(front_matter_tokens);
+		loop {
+			let node = parser.next_token_node();
+			match node {
+				Some(t_node) => if let BlockToken::KeyValue(key, value) = t_node.token {},
+				_ => break,
+			}
+		}
+
+		//println!("buffer: {:#?}", buffer);
 
 		Ok(result)
 	}
@@ -575,7 +812,10 @@ mod tests {
 		assert_eq!(token, RawToken::Sep(Sep::WhiteSpaces(" ".to_string())));
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 5);
-		assert_eq!(token, RawToken::Bracket(BracketRole::Start, Bracket::Curly));
+		assert_eq!(
+			token,
+			RawToken::Bracket(Bracket::new(BracketRole::Start, BracketType::Curly))
+		);
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 6);
 		assert_eq!(token, RawToken::SimpleString("bbb".to_string()));
@@ -590,6 +830,9 @@ mod tests {
 		assert_eq!(token, RawToken::SimpleString("ccc".to_string()));
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 14);
-		assert_eq!(token, RawToken::Bracket(BracketRole::End, Bracket::Curly));
+		assert_eq!(
+			token,
+			RawToken::Bracket(Bracket::new(BracketRole::End, BracketType::Curly))
+		);
 	}
 }
