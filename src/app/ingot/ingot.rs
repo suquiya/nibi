@@ -71,10 +71,7 @@ impl From<String> for RKeyList {
 
 impl From<Vec<String>> for RKeyList {
 	fn from(value: Vec<String>) -> Self {
-		let raw_keys = value
-			.into_iter()
-			.map(|s| RKeyRaw::from(s))
-			.collect::<Vec<_>>();
+		let raw_keys = value.into_iter().map(RKeyRaw::from).collect::<Vec<_>>();
 		Self::Raw(raw_keys)
 	}
 }
@@ -159,7 +156,7 @@ impl Ingot {
 			to: To::default(),
 		}
 	}
-	pub fn parse<R: std::io::Read>(reader: R) -> Result<Ingot, ParseError> {
+	pub fn read<R: std::io::Read>(reader: R) -> Result<Ingot, ParseError> {
 		IngotParser::parse(reader)
 	}
 }

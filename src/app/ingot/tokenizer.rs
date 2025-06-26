@@ -12,8 +12,7 @@ const SYMBOL_CHARS: &str = "{}[]()<>,;: \t\n\r\"'/";
 
 impl IngotTokenizer {
 	/// constructor
-	pub fn new(string: String) -> IngotTokenizer {
-		let chars = string.chars().collect();
+	pub fn new(chars: Vec<char>) -> IngotTokenizer {
 		IngotTokenizer { chars, pos: 0 }
 	}
 
@@ -185,11 +184,11 @@ impl IngotTokenizer {
 		(pos, token)
 	}
 
-	pub fn get_rest_all(&mut self) -> String {
+	pub fn get_rest_all(&mut self) -> (usize, Vec<char>) {
 		if self.chars.len() > self.pos {
-			self.chars[self.pos..].iter().collect()
+			(self.pos, self.chars.split_off(self.pos))
 		} else {
-			String::new()
+			(self.pos, Vec::new())
 		}
 	}
 }
@@ -202,7 +201,7 @@ mod tests {
 
 	#[test]
 	fn test_raw_tokenize_basic() {
-		let mut tokenizer = IngotTokenizer::new("aaa:bbb".to_string());
+		let mut tokenizer = IngotTokenizer::new("aaa:bbb".chars().collect());
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 0);
 		assert_eq!(token, RawToken::SimpleString("aaa".to_string()));
@@ -216,7 +215,7 @@ mod tests {
 
 	#[test]
 	fn test_raw_tokenize_bracket() {
-		let mut tokenizer = IngotTokenizer::new("aaa: {bbb: ccc}".to_string());
+		let mut tokenizer = IngotTokenizer::new("aaa: {bbb: ccc}".chars().collect());
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 0);
 		assert_eq!(token, RawToken::SimpleString("aaa".to_string()));

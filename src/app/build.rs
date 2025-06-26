@@ -27,8 +27,8 @@ pub fn build((config, config_path): (Config, &Path), proj_path: &Path) {
 		if i < 1 {
 			println!("{}: {}", i, entry.path().display());
 			let reader = open_file_with_read_mode(entry.path()).unwrap();
-			let ingot = Ingot::parse(reader);
-			// println!("{:?}", ingot);
+			let ingot = Ingot::read(reader);
+			println!("{:?}", ingot);
 		}
 
 		i += 1;

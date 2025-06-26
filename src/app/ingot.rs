@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 pub mod ingot;
 pub use ingot::Ingot;
 pub mod error;
