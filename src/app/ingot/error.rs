@@ -10,7 +10,7 @@ impl std::fmt::Display for ParseError {
 		match self {
 			ParseError::Invalid => write!(f, "ParseError: format is invalid"),
 			ParseError::Empty => write!(f, "ParseError: data is empty"),
-			ParseError::IO(err) => write!(f, "IO: {}", err),
+			ParseError::IO(err) => write!(f, "IO: {err}"),
 		}
 	}
 }

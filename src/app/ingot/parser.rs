@@ -4,7 +4,7 @@ use jiff::Timestamp;
 
 use crate::app::{
 	fs::io::read_all_from_reader,
-	ingot::ingot::{RKeyList, Status, To},
+	ingot::ingot::{RKeyList, To},
 };
 
 use super::{

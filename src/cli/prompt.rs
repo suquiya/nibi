@@ -2,12 +2,10 @@ use promkit::preset::{listbox::Listbox, readline::Readline};
 
 pub fn yes_or_no(message: &str) -> Option<bool> {
 	let confirm = Readline::default()
-		.prefix(format!("{} [Yes/No]: ", message))
+		.prefix(format!("{message} [Yes/No]: "))
 		.validator(
 			|text: &str| -> bool {
-				["yes", "y", "no", "n", "Y", "N", "YES", "NO", "Yes", "No"]
-					.iter()
-					.any(|yn| *yn == text)
+				["yes", "y", "no", "n", "Y", "N", "YES", "NO", "Yes", "No"].contains(&text)
 			},
 			|_| String::from("Accepts only 'y' or 'n' as an answer"),
 		)
@@ -38,7 +36,7 @@ pub fn yes_or_no_with_default(message: &str, default: bool) -> bool {
 }
 
 pub fn inquiry_str(message: &str, default: &str) -> String {
-	let m = format!("{}: ({}) ", message, default);
+	let m = format!("{message}: ({default}) ");
 	match readline(&m) {
 		Some(str) => str,
 		_ => default.to_string(),
@@ -46,7 +44,7 @@ pub fn inquiry_str(message: &str, default: &str) -> String {
 }
 
 pub fn selector(message: &str, options: &[&str], default: &str) -> String {
-	let m = format!("{}: ({}) ", message, default);
+	let m = format!("{message}: ({default}) ");
 	let selector = Listbox::new(options).title(m).prompt();
 	match selector {
 		Ok(mut prompt) => prompt.run().ok().unwrap_or(default.to_string()),
@@ -56,7 +54,7 @@ pub fn selector(message: &str, options: &[&str], default: &str) -> String {
 
 pub fn readline(message: &str) -> Option<String> {
 	let confirm = Readline::default()
-		.prefix(format!("{}: ", message))
+		.prefix(format!("{message}: "))
 		.prompt();
 	match confirm {
 		Ok(mut prompt) => {

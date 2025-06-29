@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, path::PathBuf, str::FromStr};
 use jiff::Timestamp;
 
 use crate::app::{
-	category::{self, Category, exists_id_in_category_list},
+	category::Category,
 	tag::Tag,
 };
 

@@ -146,8 +146,7 @@ pub fn create_config_file(
 			if config.to_file(&target_file, file_type).is_ok() {
 				Ok(target_file)
 			} else {
-				Err(IOError::new(
-					std::io::ErrorKind::Other,
+				Err(IOError::other(
 					"configファイルの作成に失敗しました",
 				))
 			}
@@ -162,8 +161,7 @@ pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IO
 			if config.to_file(&target_file, FileType::Ron).is_ok() {
 				Ok(target_file)
 			} else {
-				Err(IOError::new(
-					std::io::ErrorKind::Other,
+				Err(IOError::other(
 					"configファイルの作成に失敗しました",
 				))
 			}

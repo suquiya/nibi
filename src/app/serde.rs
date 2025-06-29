@@ -171,7 +171,7 @@ mod test {
 						}
 						s
 					});
-				println!("{}", s);
+				println!("{s}");
 				assert_eq!(e, &FileType::from_str(&s).unwrap());
 			}
 		}

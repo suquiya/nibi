@@ -30,6 +30,6 @@ fn root_action(cmd: Command, ctx: Context) -> action_result!() {
 	checks!(cmd, ctx, [error, help, version, license]);
 	println!("サブコマンドの指定がないため、ヘルプを表示します");
 	let help = help_tablize_with_alias_dedup(&cmd, &ctx);
-	println!("{}", help);
+	println!("{help}");
 	done!()
 }

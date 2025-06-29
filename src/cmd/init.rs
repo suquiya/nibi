@@ -230,7 +230,7 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 					Err(e) => err = e,
 				}
 			}
-			println!("指定されたパスでエラーが発生しました:{}", err);
+			println!("指定されたパスでエラーが発生しました:{err}");
 			false
 		}
 	}
@@ -300,7 +300,7 @@ fn create_config_file(
 				match yes_no {
 					Some(true) => match config::reset_config_file(&config_path, config) {
 						Err(err) => {
-							println!("コンフィグの初期化処理に失敗しました: {}", err);
+							println!("コンフィグの初期化処理に失敗しました: {err}");
 							false
 						}
 						_ => true,
