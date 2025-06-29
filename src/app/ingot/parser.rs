@@ -405,11 +405,6 @@ impl IngotMatterTokenParser {
 		}
 	}
 
-	pub fn parse_sep(&mut self, _pos: usize, _sep: Sep, able_key_token: bool) -> Option<TokenNode> {
-		// 何か追加であったとき用メソッド、マター解析時は基本読み飛ばし
-		self.parse_token_node(able_key_token)
-	}
-
 	pub fn parse_bracket(&mut self, pos: usize, bracket: Bracket) -> Option<TokenNode> {
 		if bracket.role == BracketRole::End {
 			// いきなり閉じる括弧はスキップ
@@ -459,7 +454,7 @@ impl IngotMatterTokenParser {
 				RawToken::Quote(q) => Some(self.parse_quoted_block(pos, q)),
 				RawToken::SimpleString(s) => Some(self.parse_simple_string(pos, s, able_key_token)),
 				RawToken::Comment(mark) => Some(self.parse_comment_part(pos, mark)),
-				RawToken::Sep(sep) => self.parse_sep(pos, sep, able_key_token),
+				RawToken::Sep(_sep) => self.parse_token_node(able_key_token),
 				RawToken::Bracket(bracket) => self.parse_bracket(pos, bracket),
 			}
 		} else {

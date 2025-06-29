@@ -311,7 +311,7 @@ fn create_config_file(
 					}
 				}
 			} else {
-				println!("コンフィグファイルの作成中にエラーが発生しました: {}", err);
+				println!("コンフィグファイルの作成中にエラーが発生しました: {err}");
 				false
 			}
 		}
@@ -345,7 +345,7 @@ fn init_vcs(dir_path: &Path) {
 	let cmd = vec!["git", "init", &dir_path_str];
 	println!("init vcs by: {}", cmd.join(" "));
 	let result = exes(cmd);
-	println!("{}", result);
+	println!("{result}");
 }
 
 fn print_early_exit_message() {

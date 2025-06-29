@@ -1,6 +1,11 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{collections::BTreeMap, path::PathBuf, str::FromStr};
 
 use jiff::Timestamp;
+
+use crate::app::{
+	category::{self, Category, exists_id_in_category_list},
+	tag::Tag,
+};
 
 use super::{error::ParseError, parser::IngotParser};
 
@@ -158,5 +163,58 @@ impl Ingot {
 	}
 	pub fn read<R: std::io::Read>(reader: R) -> Result<Ingot, ParseError> {
 		IngotParser::parse(reader)
+	}
+
+	pub fn collate_ids(
+		&mut self,
+		categories_index_map: &BTreeMap<usize, &Category>,
+		tags_index_map: &BTreeMap<usize, &Tag>,
+	) {
+		if let RKeyList::Raw(raw) = &self.categories {
+			self.categories = RKeyList::CollatedId(
+				raw.iter()
+					.filter_map(|r| match r {
+						RKeyRaw::Usize(id) => {
+							if categories_index_map.contains_key(id) {
+								Some(*id)
+							} else {
+								None
+							}
+						}
+						RKeyRaw::String(name) => {
+							categories_index_map.iter().find_map(|(id, category)| {
+								if &category.name == name || &category.path_name == name {
+									Some(*id)
+								} else {
+									None
+								}
+							})
+						}
+					})
+					.collect(),
+			);
+		}
+		if let RKeyList::Raw(raw) = &self.tags {
+			self.tags = RKeyList::CollatedId(
+				raw.iter()
+					.filter_map(|r| match r {
+						RKeyRaw::Usize(id) => {
+							if tags_index_map.contains_key(id) {
+								Some(*id)
+							} else {
+								None
+							}
+						}
+						RKeyRaw::String(name) => tags_index_map.iter().find_map(|(id, tag)| {
+							if &tag.name == name || &tag.path_name == name {
+								Some(*id)
+							} else {
+								None
+							}
+						}),
+					})
+					.collect(),
+			)
+		}
 	}
 }
