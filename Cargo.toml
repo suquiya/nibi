@@ -23,3 +23,4 @@ strum = { version = "0.27.1", features = ["derive"] }
 exrs = { version = "1.2.0", features = ["cmd"] }
 jiff = "0.2.15"
 walkdir = "2.5.0"
+minijinja = "2.11.0"

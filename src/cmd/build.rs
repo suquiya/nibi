@@ -49,7 +49,7 @@ pub fn build_action(_cmd: Command, ctx: Context) -> action_result!() {
 	// config_pathからプロジェクトパスを修正
 	let proj_path = config_path.parent().unwrap().to_path_buf();
 
-	build((config, &config_path), &proj_path);
+	build(config, &proj_path);
 
 	done!()
 }

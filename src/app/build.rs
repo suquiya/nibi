@@ -1,4 +1,7 @@
-use std::path::Path;
+use std::{
+	collections::BTreeMap,
+	path::{Path, PathBuf},
+};
 
 use walkdir::WalkDir;
 
@@ -14,14 +17,14 @@ use super::{
 	tag::{Tag, get_tags_from_dir_path},
 };
 
-pub fn build((config, _config_path): (Config, &Path), proj_path: &Path) {
+pub fn build(config: Config, proj_path: &Path) {
 	let zairyo_dir = config.get_dir_conf().get_zairyo_path(proj_path);
 
 	let categories = get_categories_from_dir_path(&zairyo_dir).unwrap_or_default();
 
 	let tags: Vec<Tag> = get_tags_from_dir_path(&zairyo_dir).unwrap_or_default();
 
-	let mut ingots: Vec<Ingot> = Vec::new();
+	let mut ingots: BTreeMap<usize, (PathBuf, Ingot)> = BTreeMap::new();
 
 	let index_categories_map = get_index_map_from_categories(&categories);
 	let index_tags_map = get_index_map_from_tags(&tags);
@@ -37,7 +40,7 @@ pub fn build((config, _config_path): (Config, &Path), proj_path: &Path) {
 				// ingotのカテゴリとタグを照合
 				ingot.collate_ids(&index_categories_map, &index_tags_map);
 
-				ingots.push(ingot);
+				ingots.insert(ingot.id, (entry.path().to_path_buf(), ingot));
 			}
 			Err(e) => {
 				println!("{}: {}", entry.path().display(), e);
