@@ -29,3 +29,9 @@ pub fn get_dir_path_string(path: &Path) -> String {
 		None => path.to_string_lossy().to_string(),
 	}
 }
+
+pub fn append_ext(path: PathBuf, ext: &str) -> PathBuf {
+	let mut path = path;
+	path.set_extension(ext);
+	path
+}

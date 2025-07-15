@@ -5,16 +5,19 @@ use combu::{
 };
 use common::sub_help;
 
+use crate::nibi_copyright;
+
 pub mod build;
 mod common;
 pub mod init;
+pub mod new;
 
 pub fn treed_cmd() -> Command {
 	Command::with_all_field(
 		"nibi".to_owned(),
 		Some(root_action),
 		crate_authors!().to_owned(),
-		copyright!(2022, suquiya),
+		nibi_copyright!(),
 		license!(crate_license!().to_owned(),file_path=>"../LICENSE"),
 		Some(crate_authors!().to_owned()),
 		"nibi [subcommand] [options]".to_owned(),
@@ -22,7 +25,7 @@ pub fn treed_cmd() -> Command {
 		flags!(help, version, license, authors, copyright),
 		vector![],
 		crate_version!().to_owned(),
-		vector![sub_help(), init::cmd(), build::cmd()],
+		vector![sub_help(), init::cmd(), build::cmd(), new::threed_cmd()],
 	)
 }
 

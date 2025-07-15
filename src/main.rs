@@ -1,3 +1,4 @@
+use combu::ActionResult;
 //BSD 3-Clause License
 //
 //Copyright (c) 2019, suquiya
@@ -7,5 +8,9 @@
 use nibi::cli;
 
 fn main() {
-	let _: Result<combu::ActionResult, combu::ActionError> = cli::run();
+	if let Ok(ActionResult::Result(cmd, ctx)) = cli::run() {
+		if let Some(action) = cmd.action {
+			let _ = action(cmd, ctx);
+		}
+	}
 }

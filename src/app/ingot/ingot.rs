@@ -2,10 +2,7 @@ use std::{collections::BTreeMap, path::PathBuf, str::FromStr};
 
 use jiff::Timestamp;
 
-use crate::app::{
-	category::Category,
-	tag::Tag,
-};
+use crate::app::{category::Category, tag::Tag};
 
 use super::{error::ParseError, parser::IngotParser};
 
@@ -119,6 +116,7 @@ impl From<&str> for To {
 			"page" => To::Page,
 			"article" => To::Article,
 			"top" => To::Top,
+			"index" => To::Top,
 			"asis" => To::AsIs,
 			_ => To::Custom(s.to_ascii_lowercase().to_string()),
 		}

@@ -2,7 +2,7 @@ use combu::{Command, Context, Flag, Vector, action_result, done, flags, license,
 
 use crate::{
 	app::{build::build, config::find_config_from_dir_path, fs::path::get_abs_path_from_option},
-	route_common,
+	get_config_common, route_common,
 };
 
 use super::common::sub_help;
@@ -36,16 +36,10 @@ pub fn build_action(_cmd: Command, ctx: Context) -> action_result!() {
 		println!("{} is not directory or does not exist", proj_path.display());
 		return done!();
 	}
-	let proj_path = proj_path.canonicalize().unwrap();
+	let proj_path = proj_path.to_path_buf();
 
 	// configを取得
-	let (config, config_path) = match find_config_from_dir_path(&proj_path) {
-		Some(c) => c,
-		_ => {
-			println!("config not found, please run `nibi init`");
-			return done!();
-		}
-	};
+	let (config, config_path) = get_config_common!(proj_path);
 	// config_pathからプロジェクトパスを修正
 	let proj_path = config_path.parent().unwrap().to_path_buf();
 
