@@ -1,7 +1,7 @@
 use combu::{Command, Context, Flag, action_result, alias, done, flags, license, vector};
 
 use crate::{
-	app::{config::find_config_from_dir_path, igata::create_new_set_base},
+	app::{config::find_config_from_dir_path, igata::create_new_pack},
 	cmd::common::{get_proj_dir_from_context, project_dir_flag, sub_help},
 	get_config_common, route_common,
 };
@@ -47,7 +47,7 @@ pub fn not_specified_target_action(_cmd: Command, _ctx: Context) -> action_resul
 }
 
 pub fn new_theme_action(_cmd: Command, ctx: Context) -> action_result!() {
-	if let Some(igata_set_name) = ctx.args.front() {
+	if let Some(igata_pack_name) = ctx.args.front() {
 		let proj_dir = get_proj_dir_from_context(&ctx);
 		let (config, config_path) = get_config_common!(proj_dir);
 
@@ -58,9 +58,9 @@ pub fn new_theme_action(_cmd: Command, ctx: Context) -> action_result!() {
 			.canonicalize()
 			.unwrap();
 
-		create_new_set_base(
+		create_new_pack(
 			&config.get_dir_conf().get_igata_path(&proj_path),
-			igata_set_name.trim().to_string(),
+			igata_pack_name.trim().to_string(),
 		);
 	} else {
 		println!("specify theme name: テーマ名を指定してください。");
