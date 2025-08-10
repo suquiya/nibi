@@ -8,9 +8,9 @@ use combu::ActionResult;
 use nibi::cli;
 
 fn main() {
-	if let Ok(ActionResult::Result(cmd, ctx)) = cli::run() {
-		if let Some(action) = cmd.action {
-			let _ = action(cmd, ctx);
-		}
+	if let Ok(ActionResult::Result(cmd, ctx)) = cli::run()
+		&& let Some(action) = cmd.action
+	{
+		let _ = action(cmd, ctx);
 	}
 }

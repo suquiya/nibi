@@ -146,9 +146,7 @@ pub fn create_config_file(
 			if config.to_file(&target_file, file_type).is_ok() {
 				Ok(target_file)
 			} else {
-				Err(IOError::other(
-					"configファイルの作成に失敗しました",
-				))
+				Err(IOError::other("configファイルの作成に失敗しました"))
 			}
 		}
 		err => err,
@@ -161,9 +159,7 @@ pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IO
 			if config.to_file(&target_file, FileType::Ron).is_ok() {
 				Ok(target_file)
 			} else {
-				Err(IOError::other(
-					"configファイルの作成に失敗しました",
-				))
+				Err(IOError::other("configファイルの作成に失敗しました"))
 			}
 		}
 		err => err,
@@ -176,10 +172,10 @@ pub fn find_config_from_dir_path(dir_path: &Path) -> Option<(Config, PathBuf)> {
 		if let Ok(true) = &config_path.try_exists() {
 			let file_type = FileType::from_str(ext).unwrap(); // 成功しないとおかしいのでunwrap
 			let file = open_file_with_read_mode(&config_path);
-			if let Ok(f) = file {
-				if let Ok(config) = Config::read(&f, file_type) {
-					return Some((config, config_path));
-				}
+			if let Ok(f) = file
+				&& let Ok(config) = Config::read(&f, file_type)
+			{
+				return Some((config, config_path));
 			}
 		}
 	}

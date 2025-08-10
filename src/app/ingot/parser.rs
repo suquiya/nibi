@@ -305,11 +305,11 @@ impl IngotMatterTokenParser {
 
 		let mut next_token = self.peek_next_token();
 
-		if let Some((_, RawToken::Quote(q))) = next_token {
-			if q == &quote {
-				self.pos_next();
-				next_token = self.peek_next_token();
-			}
+		if let Some((_, RawToken::Quote(q))) = next_token
+			&& q == &quote
+		{
+			self.pos_next();
+			next_token = self.peek_next_token();
 		}
 
 		match next_token {

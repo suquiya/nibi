@@ -103,11 +103,11 @@ impl IngotTokenizer {
 
 	fn tokenize_string(&mut self, first_char: char) -> RawToken {
 		let mut result = String::from(first_char);
-		if first_char == '\\' {
-			if let Some(nc) = self.peek_next_char() {
-				result.push(*nc);
-				self.pos_next();
-			}
+		if first_char == '\\'
+			&& let Some(nc) = self.peek_next_char()
+		{
+			result.push(*nc);
+			self.pos_next();
 		}
 
 		loop {
