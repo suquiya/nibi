@@ -1,7 +1,10 @@
 use combu::{Command, Context, Flag, action_result, alias, done, flags, license, vector};
 
 use crate::{
-	app::{config::find_config_from_dir_path, fs::path::to_parent_abs_path, igata::create_new_pack},
+	app::{
+		config::find_config_from_dir_path, fs::path::to_parent_abs_path, igata::create_new_pack,
+		recipe::create_new_recipe,
+	},
 	cmd::common::{get_proj_dir_from_context, project_dir_flag, sub_help},
 	get_config_common, route_common,
 };
@@ -97,9 +100,11 @@ pub fn new_recipe_cmd() -> Command {
 pub fn new_recipe_action(_cmd: Command, ctx: Context) -> action_result!() {
 	if let Some(recipe_name) = ctx.args.front() {
 		let proj_dir = get_proj_dir_from_context(&ctx);
-		let (config, config_path) = get_config_common!(proj_dir);
+		let (_config, config_path) = get_config_common!(proj_dir);
 
 		let proj_path = to_parent_abs_path(config_path);
+
+		create_new_recipe(&proj_path, recipe_name.to_owned());
 	}
 	done!()
 }

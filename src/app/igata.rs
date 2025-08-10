@@ -95,11 +95,11 @@ pub fn norm_pack_name(set_name: String) -> String {
 		.collect()
 }
 
-pub fn create_new_pack(igata_dir_path: &Path, set_name: String) {
-	let normed_set_name = norm_pack_name(set_name);
-	let set_dir_path = igata_dir_path.join(&normed_set_name);
+pub fn create_new_pack(igata_dir_path: &Path, pack_name: String) {
+	let normed_pack_name = norm_pack_name(pack_name);
+	let set_dir_path = igata_dir_path.join(&normed_pack_name);
 
-	println!("begin {normed_set_name} creation: {normed_set_name}の作成を開始します");
+	println!("begin {normed_pack_name} creation: {normed_pack_name}の作成を開始します");
 
 	match fs::create_dir(&set_dir_path) {
 		Ok(()) => println!(
@@ -132,12 +132,12 @@ pub fn create_new_pack(igata_dir_path: &Path, set_name: String) {
 	}
 
 	if let Ok(writer) = open_file_with_overwrite_mode(&set_dir_path.join("pack_info.ron")) {
-		let _ = write_serialized_string_all(writer, &PackInfo::new(&normed_set_name), FileType::Ron);
+		let _ = write_serialized_string_all(writer, &PackInfo::new(&normed_pack_name), FileType::Ron);
 	}
 
 	if let Ok(writer) = open_file_with_overwrite_mode(&set_dir_path.join("pack_config.ron")) {
 		let _ = write_serialized_string_all(writer, &PackConfig::default(), FileType::Ron);
 	}
 
-	println!("finished {normed_set_name} creation: {normed_set_name}の作成を完了しました");
+	println!("finished {normed_pack_name} creation: {normed_pack_name}の作成を完了しました");
 }
