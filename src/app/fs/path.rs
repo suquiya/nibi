@@ -35,3 +35,11 @@ pub fn append_ext(path: PathBuf, ext: &str) -> PathBuf {
 	path.set_extension(ext);
 	path
 }
+
+pub fn to_parent_path(path: PathBuf) -> PathBuf {
+	path.parent().unwrap().to_path_buf()
+}
+
+pub fn to_parent_abs_path(path: PathBuf) -> PathBuf {
+	to_parent_path(path).canonicalize().unwrap()
+}

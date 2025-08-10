@@ -4,5 +4,6 @@ pub mod config;
 pub mod fs;
 pub mod igata;
 pub mod ingot;
+pub mod recipe;
 pub mod serde;
 pub mod tag;

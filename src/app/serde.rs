@@ -1,7 +1,7 @@
 use std::{io, path::PathBuf};
 
 use ron::ser::PrettyConfig;
-use serde::Serialize;
+use serde::{Deserialize, Serialize, ser::SerializeSeq};
 
 #[derive(
 	Debug,
@@ -124,6 +124,78 @@ pub fn read_deserialized_value<T: for<'de> serde::de::Deserialize<'de>, R: std::
 ) -> DeResult<T> {
 	let content = io::read_to_string(read).map_err(DeError::IO)?;
 	get_deselialized_value(&content, file_type)
+}
+
+#[derive(Debug, Default)]
+pub struct StrValOrArray(pub Vec<String>);
+
+impl StrValOrArray {
+	pub fn inner(&self) -> &Vec<String> {
+		let StrValOrArray(inner) = self;
+		inner
+	}
+
+	pub fn take_inner(self) -> Vec<String> {
+		let StrValOrArray(inner) = self;
+		inner
+	}
+}
+
+impl Serialize for StrValOrArray {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		let StrValOrArray(values) = self;
+		match values.len() {
+			0 => serializer.serialize_str(""),
+			1 => serializer.serialize_str(&values[0]),
+			_ => {
+				let mut seq = serializer.serialize_seq(Some(values.len()))?;
+				for value in values {
+					seq.serialize_element(value)?;
+				}
+				seq.end()
+			}
+		}
+	}
+}
+
+impl<'de> Deserialize<'de> for StrValOrArray {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		deserializer.deserialize_any(StrValOrArrayVisitor)
+	}
+}
+
+struct StrValOrArrayVisitor;
+
+impl<'de> serde::de::Visitor<'de> for StrValOrArrayVisitor {
+	type Value = StrValOrArray;
+
+	fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+		formatter.write_str("string or array of strings")
+	}
+
+	fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+	where
+		E: serde::de::Error,
+	{
+		Ok(StrValOrArray(v.split(',').map(|s| s.to_owned()).collect()))
+	}
+
+	fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+	where
+		A: serde::de::SeqAccess<'de>,
+	{
+		let mut values = Vec::new();
+		while let Some(value) = seq.next_element()? {
+			values.push(value);
+		}
+		Ok(StrValOrArray(values))
+	}
 }
 
 #[cfg(test)]
