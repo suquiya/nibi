@@ -1,34 +1,7 @@
-use promkit::preset::{listbox::Listbox, readline::Readline};
+use cliclack::{confirm, input, select};
 
 pub fn yes_or_no(message: &str) -> Option<bool> {
-	let confirm = Readline::default()
-		.prefix(format!("{message} [Yes/No]: "))
-		.validator(
-			|text: &str| -> bool {
-				["yes", "y", "no", "n", "Y", "N", "YES", "NO", "Yes", "No"].contains(&text)
-			},
-			|_| String::from("Accepts only 'y' or 'n' as an answer"),
-		)
-		.prompt();
-	match confirm {
-		Ok(mut prompt) => {
-			let r = prompt.run();
-			match r {
-				Ok(prompt) => {
-					let text = prompt.to_lowercase();
-					if text.starts_with('y') {
-						Some(true)
-					} else if text.starts_with('n') {
-						Some(false)
-					} else {
-						None
-					}
-				}
-				Err(_) => None,
-			}
-		}
-		Err(_) => None,
-	}
+	confirm(message).interact().ok()
 }
 
 pub fn yes_or_no_with_default(message: &str, default: bool) -> bool {
@@ -36,31 +9,23 @@ pub fn yes_or_no_with_default(message: &str, default: bool) -> bool {
 }
 
 pub fn inquiry_str(message: &str, default: &str) -> String {
-	let m = format!("{message}: ({default}) ");
-	match readline(&m) {
-		Some(str) => str,
-		_ => default.to_string(),
-	}
+	input(message)
+		.default_input(default)
+		.interact()
+		.ok()
+		.unwrap_or(default.into())
 }
 
 pub fn selector(message: &str, options: &[&str], default: &str) -> String {
-	let m = format!("{message}: ({default}) ");
-	let selector = Listbox::new(options).title(m).prompt();
-	match selector {
-		Ok(mut prompt) => prompt.run().ok().unwrap_or(default.to_string()),
-		Err(_) => default.to_string(),
+	let mut s = select(message);
+	for option in options {
+		let opt_val = *option;
+		s = s.item(
+			opt_val,
+			opt_val,
+			if opt_val == default { "default" } else { "" },
+		);
 	}
-}
 
-pub fn readline(message: &str) -> Option<String> {
-	let confirm = Readline::default()
-		.prefix(format!("{message}: "))
-		.prompt();
-	match confirm {
-		Ok(mut prompt) => {
-			let r = prompt.run();
-			r.ok()
-		}
-		Err(_) => None,
-	}
+	s.interact().ok().unwrap_or(default).into()
 }

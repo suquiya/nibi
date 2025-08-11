@@ -1,9 +1,9 @@
-Config(
-    project_name: "nibi_project",
-    site_name: "site_title",
-    dir_conf: DirConf(
+(
+    project_name: "sample",
+    site_name: "sample",
+    dir_conf: (
         site: "site",
-        metals: "metals",
+        zairyo: "zairyo",
         igata: "igata",
         gears: "gears",
     ),

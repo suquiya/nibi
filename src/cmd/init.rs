@@ -1,3 +1,4 @@
+use cliclack::{log, spinner};
 use combu::{
 	Command, Context, Flag, action::bundle::Bundle, action_result, done, flags, license, vector,
 };
@@ -155,6 +156,11 @@ impl InitConfig {
 		self.vcs.unwrap_or(true)
 	}
 }
+//const INIT_EARLY_EXIT_MESSAGE: &str = "初期化処理を中断し、プログラムを終了します。";
+
+fn get_early_exit_message() -> String {
+	"初期化処理を中断し、プログラムを終了します。".to_string()
+}
 
 fn init(mut init_config: InitConfig) {
 	let dir_path = PathBuf::from(&init_config.dir_path);
@@ -164,24 +170,42 @@ fn init(mut init_config: InitConfig) {
 	}
 
 	// init先フォルダの状態確認となければ作成
-	if !create_root_dir(&dir_path, init_config.get_force_yes_no()) {
-		print_early_exit_message();
-		return;
+	let spin = spinner();
+	spin.start("プロジェクトフォルダを作成中...");
+	match create_root_dir(&dir_path, init_config.get_force_yes_no()) {
+		Ok(msg) => spin.stop(msg),
+		Err(msg) => {
+			spin.stop(msg);
+			let _ = log::error(get_early_exit_message());
+			return;
+		}
 	}
 
 	let config = get_config_from_init_config(&init_config);
-	if !create_config_file(
+
+	let spin = spinner();
+	spin.start("コンフィグファイルを作成中...");
+	match create_config_file(
 		&dir_path,
 		&config,
 		init_config.config_file_type.unwrap(),
 		init_config.get_force_yes_no(),
 	) {
-		print_early_exit_message();
-		return;
-	}
+		Ok(msg) => spin.stop(msg),
+		Err(msg) => {
+			spin.stop(msg);
+			let _ = log::error(get_early_exit_message());
+			return;
+		}
+	};
 
-	if !create_src_dirs(&config, &dir_path) {
-		print_early_exit_message();
+	match create_src_dirs(&config, &dir_path) {
+		Ok(msg) => spin.stop(msg),
+		Err(msg) => {
+			spin.stop(msg);
+			let _ = log::error(get_early_exit_message());
+			return;
+		}
 	}
 
 	if init_config.vcs_init() {
@@ -189,15 +213,12 @@ fn init(mut init_config: InitConfig) {
 	}
 }
 
-fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
+fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> Result<String, String> {
 	match fs::create_dir(dir_path) {
-		Ok(_) => {
-			println!(
-				"プロジェクトフォルダ: {}を作成しました。",
-				dir_path.display()
-			);
-			true
-		}
+		Ok(_) => Ok(format!(
+			"プロジェクトフォルダ: {}を作成しました。",
+			dir_path.display()
+		)),
 		Err(mut err) => {
 			if err.kind() == AlreadyExists {
 				// プロジェクトフォルダが存在する場合
@@ -205,14 +226,24 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 					Ok(mut i) => {
 						return if i.next().is_none() {
 							// フォルダが空の場合
-							true
+							Ok(format!(
+								"空のプロジェクトフォルダ{}が既に存在します",
+								dir_path.display()
+							))
 						} else {
-							println!("指定されたディレクトリは空ではありません");
-							get_yes_no(
+							match get_yes_no(
 								yes_no,
-								"このまま指定されたディレクトリを使用して初期化しますか？",
-							)
-							.unwrap_or(false)
+								"指定されたディレクトリは空ではありません\nこのまま指定されたディレクトリを使用して初期化しますか？",
+							) {
+								Some(true) => Ok(format!(
+									"空のプロジェクトフォルダ{}を使用して初期化します",
+									dir_path.display()
+								)),
+								_ => Err(format!(
+									"{}が既に存在するため、初期化プロセスを中断しました。",
+									dir_path.display()
+								)),
+							}
 						};
 					}
 					Err(e) => err = e,
@@ -221,24 +252,24 @@ fn create_root_dir(dir_path: &Path, yes_no: Option<bool>) -> bool {
 				// 他のエラーなら再作成してみてエラーハンドリング
 				match fs::create_dir_all(dir_path) {
 					Ok(_) => {
-						println!(
+						return Ok(format!(
 							"プロジェクトフォルダ: {}を作成しました。",
 							dir_path.display()
-						);
-						return true;
+						));
 					}
 					Err(e) => err = e,
 				}
 			}
-			println!("指定されたパスでエラーが発生しました:{err}");
-			false
+			Err(format!("指定されたパスでエラーが発生しました:{err}"))
 		}
 	}
 }
 
 fn prompt_init_config(init_config: &mut InitConfig) {
 	// init_configをプロンプトで補足する
-	println!("input your project information for initialization.");
+	println!(
+		"input your project information for initialization.: 初期化のためのプロジェクト情報を入力してください。"
+	);
 	if init_config.project_name.is_none() {
 		let dir_path = file_name(&init_config.dir_path);
 		let project_name = inquiry_str("project name", &dir_path);
@@ -287,56 +318,55 @@ fn create_config_file(
 	config: &Config,
 	file_type: FileType,
 	yes_no: Option<bool>,
-) -> bool {
+) -> Result<String, String> {
 	let config_path = config::get_config_path(dir_path, file_type.to_string().as_str());
 	match config::create_config_file(&config_path, config, file_type) {
-		Ok(_) => {
-			println!("configファイルを作成しました: {}", config_path.display());
-			true
-		}
+		Ok(_) => Ok(format!(
+			"configファイルを作成しました: {}",
+			config_path.display()
+		)),
 		Err(err) => {
 			if err.kind() == AlreadyExists {
 				let yes_no = overwrite_confirm(yes_no);
 				match yes_no {
 					Some(true) => match config::reset_config_file(&config_path, config) {
-						Err(err) => {
-							println!("コンフィグの初期化処理に失敗しました: {err}");
-							false
-						}
-						_ => true,
+						Err(err) => Err(format!("コンフィグの初期化処理に失敗しました: {err}")),
+						_ => Ok("コンフィグファイルを上書きしました".to_string()),
 					},
-					_ => {
-						println!("上書きしません。");
-						false
-					}
+					_ => Err("上書きしません。".to_owned()),
 				}
 			} else {
-				println!("コンフィグファイルの作成中にエラーが発生しました: {err}");
-				false
+				Err(format!(
+					"コンフィグファイルの作成中にエラーが発生しました: {err}"
+				))
 			}
 		}
 	}
 }
 
-fn create_src_dirs(config: &Config, root_dir: &Path) -> bool {
+fn create_src_dirs(config: &Config, root_dir: &Path) -> Result<String, String> {
 	match config.get_dir_conf().create_src_dirs(root_dir) {
 		Err(errs) => {
+			let mut msg = String::new();
 			let mut r: bool = true;
 			for e in errs {
+				if !msg.is_empty() {
+					msg.push('\n');
+				}
 				if e.0.kind() == AlreadyExists {
-					println!("ディレクトリ {} は既に存在します", e.1.display());
+					msg.push_str(&format!("ディレクトリ {} は既に存在します", e.1.display()));
 				} else {
-					println!(
+					msg.push_str(&format!(
 						"ディレクトリ {} の作成中にエラーが発生しました: {}",
 						e.1.display(),
 						e.0
-					);
+					));
 					r = false;
 				}
 			}
-			r
+			if r { Ok(msg) } else { Err(msg) }
 		}
-		_ => true,
+		_ => Ok("ソースフォルダ群を作成しました".to_string()),
 	}
 }
 
@@ -346,8 +376,4 @@ fn init_vcs(dir_path: &Path) {
 	println!("init vcs by: {}", cmd.join(" "));
 	let result = exes(cmd);
 	println!("{result}");
-}
-
-fn print_early_exit_message() {
-	println!("初期化処理を中断し、プログラムを終了します。");
 }
