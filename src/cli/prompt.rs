@@ -1,4 +1,6 @@
-use cliclack::{confirm, input, select};
+use std::fmt::Display;
+
+use cliclack::{ProgressBar, confirm, input, select, spinner};
 
 pub fn yes_or_no(message: &str) -> Option<bool> {
 	confirm(message).interact().ok()
@@ -28,4 +30,19 @@ pub fn selector(message: &str, options: &[&str], default: &str) -> String {
 	}
 
 	s.interact().ok().unwrap_or(default).into()
+}
+
+pub struct Spinner {
+	inner: ProgressBar,
+}
+
+impl Spinner {
+	pub fn start(message: &str) -> Self {
+		let spinner = spinner();
+		spinner.start(message);
+		Self { inner: spinner }
+	}
+	pub fn end(self, message: impl Display) {
+		self.inner.stop(message);
+	}
 }

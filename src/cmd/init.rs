@@ -12,7 +12,7 @@ use strum::VariantNames;
 use crate::app::config::default_config_file_type;
 use crate::app::fs::path::{file_name, get_abs_path_from_option, get_dir_path_string};
 use crate::app::serde::FileType;
-use crate::cli::prompt::{inquiry_str, selector};
+use crate::cli::prompt::{Spinner, inquiry_str, selector};
 use crate::cmd::common::{get_yes_no, get_yes_no_with_default};
 use crate::route_common;
 use crate::{
@@ -170,12 +170,11 @@ fn init(mut init_config: InitConfig) {
 	}
 
 	// init先フォルダの状態確認となければ作成
-	let spin = spinner();
-	spin.start("プロジェクトフォルダを作成中...");
+	let spinner = Spinner::start("プロジェクトフォルダを作成中...");
 	match create_root_dir(&dir_path, init_config.get_force_yes_no()) {
-		Ok(msg) => spin.stop(msg),
+		Ok(msg) => spinner.end(msg),
 		Err(msg) => {
-			spin.stop(msg);
+			spinner.end(msg);
 			let _ = log::error(get_early_exit_message());
 			return;
 		}
@@ -183,26 +182,26 @@ fn init(mut init_config: InitConfig) {
 
 	let config = get_config_from_init_config(&init_config);
 
-	let spin = spinner();
-	spin.start("コンフィグファイルを作成中...");
+	let spinner = Spinner::start("コンフィグファイルを作成中...");
 	match create_config_file(
 		&dir_path,
 		&config,
 		init_config.config_file_type.unwrap(),
 		init_config.get_force_yes_no(),
 	) {
-		Ok(msg) => spin.stop(msg),
+		Ok(msg) => spinner.end(msg),
 		Err(msg) => {
-			spin.stop(msg);
+			spinner.end(msg);
 			let _ = log::error(get_early_exit_message());
 			return;
 		}
 	};
 
+	let spinner = Spinner::start("サブフォルダ群を作成中...");
 	match create_src_dirs(&config, &dir_path) {
-		Ok(msg) => spin.stop(msg),
+		Ok(msg) => spinner.end(msg),
 		Err(msg) => {
-			spin.stop(msg);
+			spinner.end(msg);
 			let _ = log::error(get_early_exit_message());
 			return;
 		}
