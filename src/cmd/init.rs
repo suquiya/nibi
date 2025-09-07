@@ -1,4 +1,3 @@
-use cliclack::{log, spinner};
 use combu::{
 	Command, Context, Flag, action::bundle::Bundle, action_result, done, flags, license, vector,
 };
@@ -12,7 +11,7 @@ use strum::VariantNames;
 use crate::app::config::default_config_file_type;
 use crate::app::fs::path::{file_name, get_abs_path_from_option, get_dir_path_string};
 use crate::app::serde::FileType;
-use crate::cli::prompt::{Spinner, inquiry_str, selector};
+use crate::cli::prompt::{Spinner, inquiry_str, selector, show_error};
 use crate::cmd::common::{get_yes_no, get_yes_no_with_default};
 use crate::route_common;
 use crate::{
@@ -175,7 +174,7 @@ fn init(mut init_config: InitConfig) {
 		Ok(msg) => spinner.end(msg),
 		Err(msg) => {
 			spinner.end(msg);
-			let _ = log::error(get_early_exit_message());
+			show_error(get_early_exit_message());
 			return;
 		}
 	}
@@ -192,7 +191,7 @@ fn init(mut init_config: InitConfig) {
 		Ok(msg) => spinner.end(msg),
 		Err(msg) => {
 			spinner.end(msg);
-			let _ = log::error(get_early_exit_message());
+			show_error(get_early_exit_message());
 			return;
 		}
 	};
@@ -202,7 +201,7 @@ fn init(mut init_config: InitConfig) {
 		Ok(msg) => spinner.end(msg),
 		Err(msg) => {
 			spinner.end(msg);
-			let _ = log::error(get_early_exit_message());
+			show_error(get_early_exit_message());
 			return;
 		}
 	}

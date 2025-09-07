@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use cliclack::{ProgressBar, confirm, input, select, spinner};
+use cliclack::{ProgressBar, confirm, input, log, select, spinner};
 
 pub fn yes_or_no(message: &str) -> Option<bool> {
 	confirm(message).interact().ok()
@@ -45,4 +45,8 @@ impl Spinner {
 	pub fn end(self, message: impl Display) {
 		self.inner.stop(message);
 	}
+}
+
+pub fn show_error(message: impl Display) {
+	let _ = log::error(message);
 }
