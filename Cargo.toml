@@ -1,6 +1,6 @@
 [package]
 name = "nibi"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["suquiya <22910980+suquiya@users.noreply.github.com>"]
 edition = "2024"
 description = "Nibi is a static site generator. (WIP, implementing)"
