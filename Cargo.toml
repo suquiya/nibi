@@ -10,17 +10,17 @@ repository = "https://github.com/suquiya/nibi"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cliclack = "0.3.6"
-combu = { version = "1.5.1", features = ["vector_serde"] }
+cliclack = "0.3.7"
+combu = { version = "1.6.0", features = ["vector_serde"] }
 exrs = { version = "1.2.0", features = ["cmd"] }
-hcl-rs = "0.19.2"
-jiff = "0.2.15"
-minijinja = "2.11.0"
+hcl-rs = "0.19.4"
+jiff = "0.2.17"
+minijinja = "2.14.0"
 pulldown-cmark = "0.13.0"
-quick-xml = { version = "0.38.1", features = ["serialize"] }
-ron = "0.10.1"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.142"
+quick-xml = { version = "0.38.4", features = ["serialize"] }
+ron = "0.12.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.148"
 strum = { version = "0.27.2", features = ["derive"] }
-toml = "0.9.5"
+toml = "0.9.10"
 walkdir = "2.5.0"

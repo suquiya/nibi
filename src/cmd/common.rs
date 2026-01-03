@@ -64,9 +64,9 @@ pub fn take_to_bool_option(bundle: &mut Bundle, flag_name: &str) -> Option<bool>
 pub fn project_dir_flag() -> Flag {
 	Flag::with_all_field(
 		"project-dir".to_owned(),
-		"specify project directory".to_owned(),
-		vector!['d', 'c'],
-		vector!["proj-dir", "pj-d";=>String],
+		"specify project(,or target) directory".to_owned(),
+		vector!['d', 'c', 't'],
+		vector!["proj-dir", "pj-d", "target-directory", "target-dir";=>String],
 		FlagType::String,
 		FlagValue::from(""),
 	)

@@ -47,4 +47,6 @@ pub fn build(config: Config, proj_path: &Path) {
 			}
 		}
 	}
+
+	// レシピを読む
 }
