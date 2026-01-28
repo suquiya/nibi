@@ -15,8 +15,10 @@ use super::serde::{
 pub struct Config {
 	project_name: String,
 	site_name: String,
-	#[serde(default)]
+	#[serde(default, skip_serializing_if = "DirConf::is_default")]
 	dir_conf: DirConf,
+	#[serde(default, skip_serializing_if = "is_default_recipe_name")]
+	recipe: String,
 }
 
 pub fn default_project_name() -> String {
@@ -27,12 +29,21 @@ pub fn default_site_name() -> String {
 	String::from("nibi_site")
 }
 
+fn recipe_path_default() -> String {
+	String::from("recipe")
+}
+
+fn is_default_recipe_name(path: &String) -> bool {
+	path == &recipe_path_default()
+}
+
 impl Default for Config {
 	fn default() -> Self {
 		Self {
 			project_name: default_project_name(),
 			site_name: default_site_name(),
 			dir_conf: DirConf::default(),
+			recipe: recipe_path_default(),
 		}
 	}
 }
@@ -43,6 +54,7 @@ impl Config {
 			project_name,
 			site_name,
 			dir_conf: DirConf::default(),
+			recipe: recipe_path_default(),
 		}
 	}
 
@@ -71,23 +83,67 @@ impl Config {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct DirConf {
-	#[serde(default)]
+	#[serde(
+		default = "site_path_default",
+		skip_serializing_if = "is_site_path_default"
+	)]
 	site: PathBuf, // 出力先
-	#[serde(default)]
+	#[serde(
+		default = "zairyo_path_default",
+		skip_serializing_if = "is_zairyo_path_default"
+	)]
 	zairyo: PathBuf, // 生地データなどの材料
-	#[serde(default)]
+	#[serde(
+		default = "igata_path_default",
+		skip_serializing_if = "is_igata_path_default"
+	)]
 	igata: PathBuf, // 鋳型
-	#[serde(default)]
+	#[serde(
+		default = "gears_path_default",
+		skip_serializing_if = "is_gears_path_default"
+	)]
 	gears: PathBuf, //アドオン設定置き予定
+}
+
+fn site_path_default() -> PathBuf {
+	PathBuf::from(String::from("site"))
+}
+
+fn is_site_path_default(path: &Path) -> bool {
+	path == site_path_default()
+}
+
+fn zairyo_path_default() -> PathBuf {
+	PathBuf::from(String::from("zairyo"))
+}
+
+fn is_zairyo_path_default(path: &Path) -> bool {
+	path == zairyo_path_default()
+}
+
+fn igata_path_default() -> PathBuf {
+	PathBuf::from(String::from("igata"))
+}
+
+fn is_igata_path_default(path: &Path) -> bool {
+	path == igata_path_default()
+}
+
+fn gears_path_default() -> PathBuf {
+	PathBuf::from(String::from("gears"))
+}
+
+fn is_gears_path_default(path: &Path) -> bool {
+	path == gears_path_default()
 }
 
 impl Default for DirConf {
 	fn default() -> Self {
 		Self {
-			site: PathBuf::from(String::from("site")),
-			zairyo: PathBuf::from(String::from("zairyo")),
-			igata: PathBuf::from(String::from("igata")),
-			gears: PathBuf::from(String::from("gears")),
+			site: site_path_default(),
+			zairyo: zairyo_path_default(),
+			igata: igata_path_default(),
+			gears: gears_path_default(),
 		}
 	}
 }

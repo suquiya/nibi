@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, path::Path};
+use std::{
+	collections::BTreeMap,
+	path::{Path, PathBuf},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +14,29 @@ pub struct Recipe {
 	pub pack: Vec<String>,
 	pub igata_table: BTreeMap<String, String>,
 	pub values: BTreeMap<String, String>,
+}
+
+impl Recipe {
+	pub fn new(
+		pack: Vec<String>,
+		igata_table: BTreeMap<String, String>,
+		values: BTreeMap<String, String>,
+	) -> Self {
+		Self {
+			pack,
+			igata_table,
+			values,
+		}
+	}
+}
+
+impl From<RecipeSettings> for Recipe {
+	fn from(settings: RecipeSettings) -> Self {
+		let (pack, overrides) = settings.take_fields();
+		let igata_table = overrides.igata_table;
+		let values = overrides.values;
+		Self::new(pack, igata_table, values)
+	}
 }
 
 pub fn default_igata_table() -> BTreeMap<String, String> {
@@ -97,4 +123,9 @@ pub fn create_new_recipe(proj_dir_path: &Path, recipe_name: String) {
 			println!("failed to create new recipe file: レシピファイルの作成に失敗しました - {e}");
 		}
 	}
+}
+
+pub fn get_recipe_path(proj_dir_path: &Path, recipe_name: String) -> PathBuf {
+	let recipe_name = norm_recipe_name(recipe_name);
+	append_ext(proj_dir_path.join(&recipe_name), "ron")
 }
