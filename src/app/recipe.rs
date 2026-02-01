@@ -6,6 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use crate::app::{
+	config::Config,
 	fs::{io::new_empty_file, path::append_ext},
 	serde::{FileType, StrValOrArray, write_serialized_string_all},
 };
@@ -16,8 +17,21 @@ pub struct Recipe {
 	pub values: BTreeMap<String, String>,
 }
 
+pub fn default_igata_table() -> BTreeMap<String, String> {
+	["index", "post", "page", "list", "index"]
+		.iter()
+		.map(|s| (s.to_string(), s.to_string()))
+		.collect()
+}
+
+pub fn default_values(site_name: &str) -> BTreeMap<String, String> {
+	let mut values = BTreeMap::new();
+	values.insert("site_name".to_string(), site_name.to_string());
+	values
+}
+
 impl Recipe {
-	pub fn new(
+	pub fn new_with_all_fields(
 		pack: Vec<String>,
 		igata_table: BTreeMap<String, String>,
 		values: BTreeMap<String, String>,
@@ -28,22 +42,15 @@ impl Recipe {
 			values,
 		}
 	}
-}
 
-impl From<RecipeSettings> for Recipe {
-	fn from(settings: RecipeSettings) -> Self {
+	pub fn new(config: &Config, settings: RecipeSettings) -> Self {
 		let (pack, overrides) = settings.take_fields();
-		let igata_table = overrides.igata_table;
-		let values = overrides.values;
-		Self::new(pack, igata_table, values)
+		let mut igata_table = default_igata_table();
+		igata_table.extend(overrides.igata_table);
+		let mut values = default_values(&config.site_name_ref());
+		values.extend(overrides.values);
+		Self::new_with_all_fields(pack, igata_table, values)
 	}
-}
-
-pub fn default_igata_table() -> BTreeMap<String, String> {
-	["index", "post", "page", "list", "index"]
-		.iter()
-		.map(|s| (s.to_string(), s.to_string()))
-		.collect()
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]

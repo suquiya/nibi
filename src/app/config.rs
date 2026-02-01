@@ -63,9 +63,13 @@ impl Config {
 		self
 	}
 
-	pub fn site_title<T: Into<String>>(mut self, site_name: T) -> Self {
+	pub fn site_name<T: Into<String>>(mut self, site_name: T) -> Self {
 		self.site_name = site_name.into();
 		self
+	}
+
+	pub fn site_name_ref(&self) -> &String {
+		&self.site_name
 	}
 
 	pub fn to_file(&self, file: &File, file_type: FileType) -> SerResult<()> {
