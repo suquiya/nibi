@@ -8,7 +8,9 @@ use walkdir::WalkDir;
 use crate::app::{
 	category::{get_categories_from_dir_path, get_index_map_from_categories},
 	fs::io::open_file_with_read_mode,
+	igata::pack::get_packs_from_names,
 	ingot::Ingot,
+	recipe::read_recipe,
 	tag::get_index_map_from_tags,
 };
 
@@ -49,4 +51,17 @@ pub fn build(config: Config, proj_path: &Path) {
 	}
 
 	// レシピを読む
+	let recipe = match read_recipe(&config, &proj_path) {
+		Ok(recipe) => recipe,
+		Err(e) => {
+			println!("Failed to read recipe: {}", e);
+			return;
+		}
+	};
+
+	// 必要なpackのデータを読み込んでおく
+	let packs = get_packs_from_names(
+		&recipe.get_pack_names(),
+		&config.get_dir_conf().get_igata_path(proj_path),
+	);
 }

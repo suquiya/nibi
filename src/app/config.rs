@@ -83,6 +83,14 @@ impl Config {
 	pub fn get_dir_conf(&self) -> &DirConf {
 		&self.dir_conf
 	}
+
+	pub fn get_recipe(&self) -> &String {
+		&self.recipe
+	}
+
+	pub fn take_recipe(mut self) -> String {
+		core::mem::take(&mut self.recipe)
+	}
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]

@@ -134,7 +134,7 @@ impl FromStr for CommentStatus {
 	type Err = ParseError;
 	fn from_str(s: &str) -> Result<Self, ParseError> {
 		match s {
-			"open" => Ok(CommentStatus::Open),
+			"open" | "Open" | "OPEN" => Ok(CommentStatus::Open),
 			_ => Ok(CommentStatus::Close),
 		}
 	}

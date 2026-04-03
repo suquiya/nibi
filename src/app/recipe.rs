@@ -7,8 +7,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::{
 	config::Config,
-	fs::{io::new_empty_file, path::append_ext},
-	serde::{FileType, StrValOrArray, write_serialized_string_all},
+	fs::{
+		io::{new_empty_file, open_file_with_read_mode},
+		path::append_ext,
+	},
+	serde::{
+		read_deserialized_value, write_serialized_string_all, DeError, DeResult, FileType,
+		StrValOrArray,
+	},
 };
 
 pub struct Recipe {
@@ -50,6 +56,10 @@ impl Recipe {
 		let mut values = default_values(&config.site_name_ref());
 		values.extend(overrides.values);
 		Self::new_with_all_fields(pack, igata_table, values)
+	}
+
+	pub fn get_pack_names(&self) -> &[String] {
+		&self.pack
 	}
 }
 
@@ -132,7 +142,19 @@ pub fn create_new_recipe(proj_dir_path: &Path, recipe_name: String) {
 	}
 }
 
-pub fn get_recipe_path(proj_dir_path: &Path, recipe_name: String) -> PathBuf {
+pub fn read_recipe(config: &Config, proj_dir_path: &Path) -> DeResult<Recipe> {
+	let recipe_path = get_recipe_path(proj_dir_path, config.get_recipe().clone());
+	match open_file_with_read_mode(&recipe_path) {
+		Ok(file) => read_deserialized_value(file, FileType::Ron)
+			.map(|settings: RecipeSettings| Recipe::new(config, settings)),
+		Err(e) => {
+			println!("failed to read recipe file: レシピファイルの読み込みに失敗しました - {e}");
+			Err(DeError::IO(e))
+		}
+	}
+}
+
+fn get_recipe_path(proj_dir_path: &Path, recipe_name: String) -> PathBuf {
 	let recipe_name = norm_recipe_name(recipe_name);
 	append_ext(proj_dir_path.join(&recipe_name), "ron")
 }
