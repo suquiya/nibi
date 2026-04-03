@@ -2,8 +2,8 @@ use combu::{Command, Context, Flag, action_result, alias, done, flags, license, 
 
 use crate::{
 	app::{
-		config::find_config_from_dir_path, fs::path::to_parent_abs_path, igata::create_new_pack,
-		recipe::create_new_recipe,
+		config::find_config_from_dir_path, fs::path::to_parent_abs_path,
+		igata::pack::create_new_pack, recipe::create_new_recipe,
 	},
 	cmd::common::{get_proj_dir_from_context, project_dir_flag, sub_help},
 	get_config_common, route_common,
