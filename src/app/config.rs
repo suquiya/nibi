@@ -12,6 +12,7 @@ use super::serde::{
 };
 
 #[derive(Debug, Deserialize, Serialize)]
+/// Config struct
 pub struct Config {
 	project_name: String,
 	site_name: String,
@@ -20,19 +21,21 @@ pub struct Config {
 	#[serde(default, skip_serializing_if = "is_default_recipe_name")]
 	recipe: String,
 }
-
+/// Default project name
 pub fn default_project_name() -> String {
 	String::from("nibi_project")
 }
 
+/// Default site name
 pub fn default_site_name() -> String {
 	String::from("nibi_site")
 }
 
+/// Default recipe path
 fn recipe_path_default() -> String {
 	String::from("recipe")
 }
-
+/// Returns true if the path is the default recipe path
 fn is_default_recipe_name(path: &String) -> bool {
 	path == &recipe_path_default()
 }
@@ -49,6 +52,7 @@ impl Default for Config {
 }
 
 impl Config {
+	/// Creates a new Config with the given project name and site name
 	pub fn new(project_name: String, site_name: String) -> Self {
 		Self {
 			project_name,
@@ -57,43 +61,46 @@ impl Config {
 			recipe: recipe_path_default(),
 		}
 	}
-
+	/// Sets the project name
 	pub fn project_name<T: Into<String>>(mut self, proj_name: T) -> Self {
 		self.project_name = proj_name.into();
 		self
 	}
 
+	/// Sets the site name
 	pub fn site_name<T: Into<String>>(mut self, site_name: T) -> Self {
 		self.site_name = site_name.into();
 		self
 	}
 
+	/// Returns the site name
 	pub fn site_name_ref(&self) -> &String {
 		&self.site_name
 	}
-
+	/// Writes the config to a file
 	pub fn to_file(&self, file: &File, file_type: FileType) -> SerResult<()> {
 		write_serialized_string_all(file, self, file_type)
 	}
-
+	/// Reads the config from a file
 	pub fn read<R: std::io::Read>(reader: R, file_type: FileType) -> DeResult<Config> {
 		read_deserialized_value(reader, file_type)
 	}
-
+	/// Returns the directory configuration
 	pub fn get_dir_conf(&self) -> &DirConf {
 		&self.dir_conf
 	}
-
+	/// Returns the recipe name
 	pub fn get_recipe(&self) -> &String {
 		&self.recipe
 	}
-
+	/// Takes the recipe name out of the config
 	pub fn take_recipe(mut self) -> String {
 		core::mem::take(&mut self.recipe)
 	}
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+/// Directory configuration for the app
 pub struct DirConf {
 	#[serde(
 		default = "site_path_default",
@@ -161,6 +168,7 @@ impl Default for DirConf {
 }
 
 impl DirConf {
+	/// Creates the source directories for the app
 	pub fn create_src_dirs(&self, parent_path: &Path) -> Result<(), Vec<(IOError, &PathBuf)>> {
 		let mut errs = vec![];
 		for path in [&self.zairyo, &self.igata, &self.gears] {
@@ -170,40 +178,42 @@ impl DirConf {
 		}
 		if errs.is_empty() { Ok(()) } else { Err(errs) }
 	}
-
+	/// Returns `true` if the config is the default
 	pub fn is_default(&self) -> bool {
 		let default = DirConf::default();
 		self == &default
 	}
-
+	/// Returns the path to the zairyo directory
 	pub fn get_zairyo_path(&self, parent_path: &Path) -> PathBuf {
 		parent_path.join(&self.zairyo)
 	}
 
+	/// Returns the path to the igata directory
 	pub fn get_igata_path(&self, parent_path: &Path) -> PathBuf {
 		parent_path.join(&self.igata)
 	}
-
+	/// Returns the path to the gears directory
 	pub fn get_gears_path(&self, parent_path: &Path) -> PathBuf {
 		parent_path.join(&self.gears)
 	}
 
+	/// Returns the path to the site directory
 	pub fn get_site_path(&self, parent_path: &Path) -> PathBuf {
 		parent_path.join(&self.site)
 	}
 }
-
+/// Returns the default config file type (RON)
 pub fn default_config_file_type() -> FileType {
 	FileType::Ron
 }
-
+/// Returns the path to the config file
 pub fn get_config_path(dir_path: &Path, ext: &str) -> PathBuf {
 	let mut target = dir_path.to_path_buf();
 	target.push("config");
 	target.set_extension(ext);
 	target
 }
-
+/// Creates a new config file at the given path
 pub fn create_config_file(
 	config_path: &Path,
 	config: &Config,
@@ -220,7 +230,7 @@ pub fn create_config_file(
 		err => err,
 	}
 }
-
+/// Resets the config file at the given path
 pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IOError> {
 	match open_file_with_overwrite_mode(config_path) {
 		Ok(target_file) => {
@@ -233,7 +243,7 @@ pub fn reset_config_file(config_path: &Path, config: &Config) -> Result<File, IO
 		err => err,
 	}
 }
-
+/// Finds the config file from the given directory path. If not found, recursively searches the parent directory.
 pub fn find_config_from_dir_path(dir_path: &Path) -> Option<(Config, PathBuf)> {
 	for ext in FileType::VARIANTS.iter() {
 		let config_path = get_config_path(dir_path, ext);

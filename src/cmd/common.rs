@@ -80,6 +80,7 @@ pub fn get_proj_dir_from_context(ctx: &Context) -> PathBuf {
 }
 
 #[macro_export]
+/// A utility macro for creating a route action function with common checks.
 macro_rules! route_common {
 	($action:ident) => {
 		|mut cmd: Command, ctx: Context| -> action_result!() {
@@ -91,6 +92,7 @@ macro_rules! route_common {
 }
 
 #[macro_export]
+/// Macro for creating a copyright string.
 macro_rules! nibi_copyright {
 	() => {
 		copyright!(2024, suquiya)
@@ -98,6 +100,7 @@ macro_rules! nibi_copyright {
 }
 
 #[macro_export]
+/// Macro for getting a config from a directory path.
 macro_rules! get_config_common {
 	($dir: ident) => {
 		match find_config_from_dir_path(&$dir) {

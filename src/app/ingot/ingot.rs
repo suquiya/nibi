@@ -78,7 +78,7 @@ impl From<Vec<String>> for RKeyList {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, strum::Display)]
 pub enum Status {
 	#[default]
 	Draft,
@@ -123,7 +123,7 @@ impl From<&str> for To {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, strum::Display)]
 pub enum CommentStatus {
 	Open,
 	#[default]

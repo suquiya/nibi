@@ -7,6 +7,7 @@ use crate::{
 
 use super::common::sub_help;
 
+/// Returns a `Command` for the `build` subcommand.
 pub fn cmd() -> Command {
 	Command::with_all_field(
 		"build".to_owned(),
@@ -24,10 +25,12 @@ pub fn cmd() -> Command {
 	)
 }
 
+/// Returns an empty `Vector` of flags for the `build` subcommand.
 pub fn flags() -> Vector<Flag> {
 	vector![]
 }
 
+/// Action function for the `build` subcommand. This executes build site function for the nibi project.
 pub fn build_action(_cmd: Command, ctx: Context) -> action_result!() {
 	let proj_path = get_abs_path_from_option(ctx.args.front());
 	println!("dir_path: {}", proj_path.display());

@@ -9,6 +9,7 @@ use crate::{
 	get_config_common, route_common,
 };
 
+/// Returns the [new] command for the Nibi CLI.
 pub fn threed_cmd() -> Command {
 	Command::with_all_field(
 		"new".to_owned(),
@@ -26,6 +27,7 @@ pub fn threed_cmd() -> Command {
 	)
 }
 
+/// Returns the [new igata_pack] command for the Nibi CLI.
 pub fn new_igt_pack_cmd() -> Command {
 	Command::with_all_field(
 		"igata_pack".to_owned(),
@@ -43,6 +45,7 @@ pub fn new_igt_pack_cmd() -> Command {
 	)
 }
 
+/// The action for the [new] command when no target is specified.
 pub fn not_specified_target_action(_cmd: Command, _ctx: Context) -> action_result!() {
 	println!("specify new target: 新しく作成するものを指定してください。");
 	println!("now available target: ");
@@ -70,6 +73,7 @@ fn new_igt_pack_alias() -> Vec<String> {
 	]
 }
 
+/// The action for the [new igata_pack] command.
 pub fn new_igt_pack_action(_cmd: Command, ctx: Context) -> action_result!() {
 	if let Some(igata_pack_name) = ctx.args.front() {
 		let proj_dir = get_proj_dir_from_context(&ctx);
@@ -87,6 +91,7 @@ pub fn new_igt_pack_action(_cmd: Command, ctx: Context) -> action_result!() {
 	done!()
 }
 
+/// Returns the [new recipe] command for the Nibi CLI.
 pub fn new_recipe_cmd() -> Command {
 	Command::with_all_field(
 		"recipe".into(),
@@ -104,6 +109,7 @@ pub fn new_recipe_cmd() -> Command {
 	)
 }
 
+/// The action for the [new recipe] command.
 pub fn new_recipe_action(_cmd: Command, ctx: Context) -> action_result!() {
 	if let Some(recipe_name) = ctx.args.front() {
 		let proj_dir = get_proj_dir_from_context(&ctx);

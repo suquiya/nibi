@@ -1,7 +1,9 @@
 use crate::cmd;
 use combu::action_result;
 
+/// The prompt module provides prompt-based user input functionality.
 pub mod prompt;
+/// The stdio module provides stdio-based user input functionality.
 mod stdio;
 
 /// Execute Program

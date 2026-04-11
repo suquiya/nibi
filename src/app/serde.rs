@@ -17,21 +17,29 @@ use serde::{Deserialize, Serialize, ser::SerializeSeq};
 )]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "lowercase")]
+/// Represents the file type for serialization and deserialization.
 pub enum FileType {
 	#[default]
+	/// Represents the RON file type.
 	Ron,
+	/// Represents the TOML file type.
 	Toml,
+	/// Represents the JSON file type.
 	Json,
+	/// Represents the XML file type.
 	Xml,
+	/// Represents the HCL file type.
 	Hcl,
 }
 
 impl FileType {
+	/// Appends the corresponding file extension to the given path.
 	pub fn append_ext(&self, path: &mut PathBuf) {
 		path.set_extension(self.to_string());
 	}
 }
 
+/// Returns a path with the file type corresponding extension appended.
 pub fn get_extended_path<T: Into<PathBuf>>(path: T, file_type: FileType) -> PathBuf {
 	let mut path = path.into();
 	file_type.append_ext(&mut path);
@@ -39,17 +47,25 @@ pub fn get_extended_path<T: Into<PathBuf>>(path: T, file_type: FileType) -> Path
 }
 
 #[derive(Debug, strum::Display)]
+/// Represents the error that can occur during serialization.
 pub enum SerError {
+	/// Represents the RON serialization error.
 	Ron(ron::Error),
+	/// Represents the JSON serialization error.
 	Json(serde_json::Error),
+	/// Represents the TOML serialization error.
 	Toml(toml::ser::Error),
+	/// Represents the IO error.
 	IO(io::Error),
+	/// Represents the XML serialization error.
 	Xml(quick_xml::SeError),
+	/// Represents the HCL serialization error.
 	Hcl(hcl::Error),
 }
-
+/// Type alias for serialization results.
 pub type SerResult<T> = Result<T, SerError>;
 
+/// Writes a serialized string to a writer based on the file type.
 pub fn write_serialized_string<T: Serialize, W: std::fmt::Write + std::io::Write>(
 	mut writer: W,
 	value: &T,
@@ -71,7 +87,7 @@ pub fn write_serialized_string<T: Serialize, W: std::fmt::Write + std::io::Write
 		FileType::Hcl => hcl::ser::to_writer(writer, value).map_err(SerError::Hcl),
 	}
 }
-
+/// Returns a serialized string based on the file type.
 pub fn get_serialized_string<T: Serialize>(value: &T, file_type: FileType) -> SerResult<String> {
 	match file_type {
 		FileType::Ron => {
@@ -83,7 +99,7 @@ pub fn get_serialized_string<T: Serialize>(value: &T, file_type: FileType) -> Se
 		FileType::Hcl => hcl::ser::to_string(value).map_err(SerError::Hcl),
 	}
 }
-
+/// Writes a serialized string to a writer based on the file type.
 pub fn write_serialized_string_all<T: Serialize, W: std::io::Write>(
 	mut writer: W,
 	value: &T,
@@ -94,17 +110,24 @@ pub fn write_serialized_string_all<T: Serialize, W: std::io::Write>(
 }
 
 #[derive(Debug, strum::Display)]
+/// Represents the error that can occur during deserialization.
 pub enum DeError {
+	/// Represents the RON deserialization error.
 	Ron(ron::de::SpannedError),
+	/// Represents the JSON deserialization error.
 	Json(serde_json::Error),
+	/// Represents the TOML deserialization error.
 	Toml(toml::de::Error),
+	/// Represents the IO error.
 	IO(io::Error),
+	/// Represents the XML deserialization error.
 	Xml(quick_xml::DeError),
+	/// Represents the HCL deserialization error.
 	Hcl(hcl::Error),
 }
-
+/// Type alias for deserialization results.
 pub type DeResult<T> = Result<T, DeError>;
-
+/// Deserializes a value from a string based on the file type.
 pub fn get_deselialized_value<T: for<'de> serde::de::Deserialize<'de>>(
 	str: &str,
 	file_type: FileType,
@@ -117,7 +140,7 @@ pub fn get_deselialized_value<T: for<'de> serde::de::Deserialize<'de>>(
 		FileType::Hcl => hcl::de::from_str(str).map_err(DeError::Hcl),
 	}
 }
-
+/// Reads and deserializes a value from a reader based on the file type.
 pub fn read_deserialized_value<T: for<'de> serde::de::Deserialize<'de>, R: std::io::Read>(
 	read: R,
 	file_type: FileType,
@@ -127,14 +150,16 @@ pub fn read_deserialized_value<T: for<'de> serde::de::Deserialize<'de>, R: std::
 }
 
 #[derive(Debug, Default)]
+/// Represents a string value or an array of strings.
 pub struct StrValOrArray(pub Vec<String>);
 
 impl StrValOrArray {
+	/// Returns a reference to the inner vector of strings.
 	pub fn inner(&self) -> &Vec<String> {
 		let StrValOrArray(inner) = self;
 		inner
 	}
-
+	/// Returns the inner vector of strings with ownership.
 	pub fn take_inner(self) -> Vec<String> {
 		let StrValOrArray(inner) = self;
 		inner

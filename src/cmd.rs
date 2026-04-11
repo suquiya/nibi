@@ -7,11 +7,16 @@ use common::sub_help;
 
 use crate::nibi_copyright;
 
+/// The build command module.
 pub mod build;
+/// The common module.
 mod common;
+/// The init commandmodule.
 pub mod init;
+/// The new command module.
 pub mod new;
 
+/// Returns the root command for the Nibi CLI.
 pub fn treed_cmd() -> Command {
 	Command::with_all_field(
 		"nibi".to_owned(),

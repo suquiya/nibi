@@ -2,10 +2,12 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{Error, Read, Write};
 use std::path::Path;
 
+/// Creates a new empty file at the given path.
 pub fn new_empty_file(path: &Path) -> Result<File, Error> {
 	OpenOptions::new().write(true).create_new(true).open(path)
 }
 
+/// Opens a file with overwrite mode (truncates if exists).
 pub fn open_file_with_overwrite_mode(path: &Path) -> Result<File, Error> {
 	OpenOptions::new()
 		.write(true)
@@ -14,14 +16,17 @@ pub fn open_file_with_overwrite_mode(path: &Path) -> Result<File, Error> {
 		.open(path)
 }
 
+/// Opens a file with append mode (creates if not exists).
 pub fn open_file_with_append_mode(path: &Path) -> Result<File, Error> {
 	OpenOptions::new().append(true).create(true).open(path)
 }
 
+/// Opens a file with read mode.
 pub fn open_file_with_read_mode(path: &Path) -> Result<File, Error> {
 	OpenOptions::new().read(true).open(path)
 }
 
+/// Creates a new file with the given contents.
 pub fn new_file_with_init_contents(path: &Path, init_contents: &str) -> Result<File, Error> {
 	match new_empty_file(path) {
 		Ok(target_file) => write_str(target_file, init_contents),
@@ -29,6 +34,7 @@ pub fn new_file_with_init_contents(path: &Path, init_contents: &str) -> Result<F
 	}
 }
 
+/// Writes a string to a file.
 pub fn write_str(mut file: File, str: &str) -> Result<File, Error> {
 	match file.write_all(str.as_bytes()) {
 		Ok(()) => Ok(file),
@@ -36,14 +42,17 @@ pub fn write_str(mut file: File, str: &str) -> Result<File, Error> {
 	}
 }
 
+/// Writes a string to a file.
 pub fn write_string(file: File, string: String) -> Result<File, Error> {
 	write_str(file, &string)
 }
 
+/// Reads the entire contents of a file into a string.
 pub fn read_all(path: &Path) -> Result<String, Error> {
 	fs::read_to_string(path)
 }
 
+/// Reads the entire contents of a reader into a string.
 pub fn read_all_from_reader<R: Read>(mut reader: R) -> Result<String, Error> {
 	let mut buf = String::new();
 	match reader.read_to_string(&mut buf) {
@@ -52,6 +61,7 @@ pub fn read_all_from_reader<R: Read>(mut reader: R) -> Result<String, Error> {
 	}
 }
 
+/// Reads the entire contents of a file into a byte vector.
 pub fn read_all_byte(mut file: &File) -> Result<(usize, Vec<u8>), Error> {
 	let mut buf = Vec::new();
 	match file.read_to_end(&mut buf) {

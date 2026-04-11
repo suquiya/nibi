@@ -212,6 +212,8 @@ pub fn read_pack_settings(pack_dir: &Path) -> Option<PackProperties> {
 	Some(PackProperties::new(info, config, pack_dir.to_path_buf()))
 }
 
+/// 指定されたpack名リストにあるpackを読み込む
+/// pack名の重複チェックは行わない、重複削除してある場合がおそらく一番効率がいい
 pub fn get_packs_from_names(
 	pack_names: &[String],
 	igata_packs_dir: &Path,
@@ -221,6 +223,7 @@ pub fn get_packs_from_names(
 	let mut readed_paths: HashSet<PathBuf> = HashSet::new();
 	// レシピで指定されたpackのデータを格納
 	let mut packs = BTreeMap::<String, PackProperties>::new();
+
 	// 鋳型パックのディレクトリ
 	for pack_name in pack_names {
 		if let Some(cached) = pack_name_cache.get(pack_name) {
@@ -241,5 +244,5 @@ pub fn get_packs_from_names(
 		}
 	}
 
-	return packs;
+	packs
 }

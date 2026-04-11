@@ -21,6 +21,7 @@ use crate::{
 
 use super::common::{get_flagged_yes_no, sub_help, take_to_bool_option, take_to_string_option};
 
+/// Returns Command that initializes a new nibi project in the specified directory.
 pub fn cmd() -> Command {
 	Command::with_all_field(
 		"init".to_owned(),
@@ -37,7 +38,7 @@ pub fn cmd() -> Command {
 		vector![sub_help()],
 	)
 }
-
+/// Returns the flags for the `init` command.
 pub fn flags() -> Vector<Flag> {
 	vector![
 		yes_flag!(),
@@ -101,7 +102,7 @@ pub fn flags() -> Vector<Flag> {
 		)
 	]
 }
-
+/// action function that initializes a new nibi project in the specified directory.
 pub fn init_action(cmd: Command, ctx: Context) -> action_result!() {
 	let bundle = Bundle::new(ctx, cmd);
 
