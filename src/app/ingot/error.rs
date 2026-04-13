@@ -1,7 +1,11 @@
 #[derive(Debug)]
+/// Represents an error that can occur during ingot parsing.
 pub enum ParseError {
+	/// The format is invalid.
 	Invalid,
+	/// The data is empty.
 	Empty,
+	/// An I/O error occurred.
 	IO(std::io::Error),
 }
 

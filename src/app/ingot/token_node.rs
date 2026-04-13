@@ -1,8 +1,10 @@
 use super::token::BlockToken;
 
-// 行番号などもう少し複雑な処理が必要になる場合に備えてstructにしておく
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Represents the position of a token in the source code.
+/// For more complex position handling, `Pos` is defined as a struct.
 pub struct Pos {
+	/// The start position of the token in the source code.
 	pub start: usize,
 }
 
@@ -13,26 +15,32 @@ impl From<usize> for Pos {
 }
 
 impl Pos {
+	/// Creates a new `Pos` instance with the given start position.
 	pub fn new(start: usize) -> Pos {
 		Pos { start }
 	}
-
+	/// Returns the start position of the token in the source code.
 	pub fn start(&self) -> &usize {
 		&self.start
 	}
-
+	/// Returns a mutable reference to the start position of the token in the source code.
 	pub fn mut_start(&mut self) -> &mut usize {
 		&mut self.start
 	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// TokenNode struct represents a token node in the AST.
+/// It contains the position of the token in the source code and the token itself.
 pub struct TokenNode {
+	/// The position of the token in the source code.
 	pub pos: Pos,
+	/// The token itself.
 	pub token: BlockToken,
 }
 
 impl TokenNode {
+	/// Creates a new `TokenNode` instance with the given position and token.
 	pub fn new<T: Into<Pos>>(pos: T, token: BlockToken) -> TokenNode {
 		TokenNode {
 			pos: pos.into(),
@@ -42,6 +50,7 @@ impl TokenNode {
 }
 
 impl TokenNode {
+	/// Returns the string value of the token, if it has one.
 	pub fn get_string_value(&self) -> Option<&str> {
 		self.token.get_string_value()
 	}

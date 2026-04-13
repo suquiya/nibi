@@ -16,6 +16,7 @@ use super::{
 };
 
 #[derive(Debug)]
+/// Parses an `Ingot` from a reader.
 pub struct IngotParser {}
 
 fn split_chars(mut chars: Vec<char>, pos: usize) -> (Vec<char>, Vec<char>) {
@@ -61,6 +62,7 @@ fn is_empty_chars(chars: &[char]) -> bool {
 }
 
 impl IngotParser {
+	/// Splits the back matter from the given characters.
 	pub fn split_back_matter(chars: Vec<char>) -> (Vec<char>, Vec<char>) {
 		let mut pos = chars.len() - 1;
 		let mut nl_count: usize = 0;
@@ -92,6 +94,7 @@ impl IngotParser {
 		}
 		(chars, Vec::new())
 	}
+	/// Sets the value of the given key from the token node.
 	pub fn set_from_key_value(result: &mut Ingot, key: String, value: Option<TokenNode>) {
 		if let Some(v) = value {
 			let token = v.token;
@@ -145,7 +148,7 @@ impl IngotParser {
 			}
 		}
 	}
-
+	/// Parses the buffer from given reader into an `Ingot`.
 	pub fn parse<R: Read>(reader: R) -> Result<Ingot, ParseError> {
 		let buffer = read_all_from_reader(reader).map_err(ParseError::IO)?;
 
@@ -250,35 +253,38 @@ impl IngotParser {
 		Ok(result)
 	}
 }
-
+/// Parses the raw tokens into an Ingot matter block.
 pub struct IngotMatterTokenParser {
+	/// The raw tokens to parse.
 	pub raw_tokens: Vec<RawTokenData>,
+	/// The current position in the raw tokens.
 	pub pos: usize,
 }
 
 impl IngotMatterTokenParser {
+	/// Creates a new `IngotMatterTokenParser` for the given raw tokens.
 	pub fn new(raw_tokens: Vec<RawTokenData>) -> IngotMatterTokenParser {
 		IngotMatterTokenParser { raw_tokens, pos: 0 }
 	}
-
+	/// Peeks at the next token without advancing the position.
 	pub fn peek_next_token(&self) -> Option<&RawTokenData> {
 		self.raw_tokens.get(self.pos)
 	}
-
+	/// Advances the position to the next token.
 	pub fn next_token(&mut self) -> Option<RawTokenData> {
 		let result = self.peek_next_token().cloned();
 		self.pos += 1;
 		result
 	}
-
+	/// Advances the position by one token without returning it.
 	pub fn pos_next(&mut self) {
 		self.pos += 1;
 	}
-
+	/// Moves the position back by one token.
 	pub fn pos_back(&mut self) {
 		self.pos -= 1;
 	}
-
+	/// Seeks forward until a stop token is encountered, returning the content as a string.
 	pub fn seek_and_get_string_until(&mut self, stop_tokens: Vec<RawToken>) -> String {
 		let mut result = String::new();
 		loop {
@@ -296,7 +302,7 @@ impl IngotMatterTokenParser {
 		}
 		result
 	}
-
+	/// Parses a quoted block of text, returning the content as a `TokenNode`.
 	pub fn parse_quoted_block(&mut self, pos: usize, quote: Quote) -> TokenNode {
 		let content = self.seek_and_get_string_until(vec![
 			RawToken::Quote(quote.clone()),
@@ -346,7 +352,7 @@ impl IngotMatterTokenParser {
 			),
 		)
 	}
-
+	/// Parses a simple string, returning the content as a `TokenNode`.
 	pub fn parse_simple_string(&mut self, pos: usize, s: String, sep_colon: bool) -> TokenNode {
 		let mut content = s;
 		let mut next_colon = false;
@@ -389,7 +395,7 @@ impl IngotMatterTokenParser {
 			TokenNode::new(pos, BlockToken::UnquotedString(content))
 		}
 	}
-
+	/// Parses a comment part, returning the content as a `TokenNode`.
 	pub fn parse_comment_part(&mut self, pos: usize, mark: CommentMark) -> TokenNode {
 		match mark {
 			CommentMark::LineBegin => {
@@ -404,7 +410,7 @@ impl IngotMatterTokenParser {
 			CommentMark::BlockEnd => self.parse_simple_string(pos, String::from("*/"), true),
 		}
 	}
-
+	/// Parses a bracket, returning the content as a `TokenNode` if successful.
 	pub fn parse_bracket(&mut self, pos: usize, bracket: Bracket) -> Option<TokenNode> {
 		if bracket.role == BracketRole::End {
 			// いきなり閉じる括弧はスキップ
@@ -461,7 +467,7 @@ impl IngotMatterTokenParser {
 			None
 		}
 	}
-
+	/// Parses the next token node from the raw tokens, returning `None` if there are no more tokens.
 	pub fn next_token_node(&mut self) -> Option<TokenNode> {
 		self.parse_token_node(true)
 	}

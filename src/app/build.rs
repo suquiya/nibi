@@ -18,7 +18,7 @@ use super::{
 	config::Config,
 	tag::{Tag, get_tags_from_dir_path},
 };
-
+/// Builds the website of the project.
 pub fn build(config: Config, proj_path: &Path) {
 	let zairyo_dir = config.get_dir_conf().get_zairyo_path(proj_path);
 
@@ -51,7 +51,7 @@ pub fn build(config: Config, proj_path: &Path) {
 	}
 
 	// レシピを読む
-	let recipe = match read_recipe(&config, &proj_path) {
+	let recipe = match read_recipe(&config, proj_path) {
 		Ok(recipe) => recipe,
 		Err(e) => {
 			println!("Failed to read recipe: {}", e);
@@ -61,7 +61,7 @@ pub fn build(config: Config, proj_path: &Path) {
 
 	// 必要なpackのデータを読み込んでおく
 	let packs = get_packs_from_names(
-		&recipe.get_pack_names(),
+		recipe.get_pack_names(),
 		&config.get_dir_conf().get_igata_path(proj_path),
 	);
 }

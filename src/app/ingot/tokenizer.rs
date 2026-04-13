@@ -3,8 +3,10 @@ use super::token::{
 };
 
 #[derive(Debug)]
+/// Tokenizer for the ingot format.
 pub struct IngotTokenizer {
 	chars: Vec<char>,
+	/// Current position of cursor in chars.
 	pub pos: usize,
 }
 
@@ -38,6 +40,7 @@ impl IngotTokenizer {
 		self.pos += 1;
 	}
 
+	/// returns true if the character is a symbol character
 	pub fn is_symbol_char(c: char) -> bool {
 		SYMBOL_CHARS.contains(c)
 	}
@@ -151,7 +154,7 @@ impl IngotTokenizer {
 		}
 		RawToken::SimpleString(result)
 	}
-
+	/// Returns the next raw token from chars.
 	pub fn next_raw_token(&mut self) -> RawTokenData {
 		let pos = self.pos;
 		let next_char = self.next_char();
@@ -183,7 +186,7 @@ impl IngotTokenizer {
 
 		(pos, token)
 	}
-
+	/// Returns the rest of the chars after the current position.
 	pub fn get_rest_all(&mut self) -> (usize, Vec<char>) {
 		if self.chars.len() > self.pos {
 			(self.pos, self.chars.split_off(self.pos))

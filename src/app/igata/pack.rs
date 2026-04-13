@@ -15,21 +15,31 @@ use crate::app::{
 };
 
 #[derive(Default, Deserialize, Serialize, Clone)]
+/// Represents an author of a pack.
 pub struct Author {
+	/// The name of the author.
 	pub name: String,
+	/// The contact information of the author.
 	pub contact: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+/// Represents the information of a pack.
 pub struct PackInfo {
+	/// The name of the pack.
 	pub name: String,
+	/// The authors of the pack.
 	pub authors: Vec<Author>,
+	/// The description of the pack.
 	pub description: String,
+	/// The license of the pack.
 	pub license: String,
+	/// The version of the pack.
 	pub version: String,
 }
 
 impl PackInfo {
+	/// Creates a new `PackInfo` with the given name.
 	pub fn new<T: Into<String>>(name: T) -> Self {
 		Self {
 			name: name.into(),
@@ -48,26 +58,36 @@ impl Default for PackInfo {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+/// Represents the configuration of a pack.
 pub struct PackConfig {
+	/// Additional renders to perform on the pack.
 	pub additional_renders: Option<BTreeMap<PathBuf, PathBuf>>,
+	/// Static files to copy into the pack.
 	pub static_copy: Option<BTreeMap<PathBuf, PathBuf>>,
+	/// Values to replace in the pack.
 	pub values: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+/// Represents the properties of a pack.
 pub struct PackProperties {
+	/// The directory of the pack.
 	pub directory: PathBuf,
+	/// The info of the pack.
 	pub info: PackInfo,
+	/// The config of the pack.
 	pub config: PackConfig,
 }
 
 impl PackConfig {
+	/// Creates a new `PackConfig` with default values.
 	pub fn new() -> Self {
 		Self::default()
 	}
 }
 
 impl PackProperties {
+	/// Creates a new `PackProperties` with the given info, config, and directory.
 	pub fn new(info: PackInfo, config: PackConfig, directory: PathBuf) -> Self {
 		Self {
 			info,
@@ -75,19 +95,19 @@ impl PackProperties {
 			directory,
 		}
 	}
-
-	pub fn get_directory(&self) -> &PathBuf {
+	/// Returns a reference to the directory of the pack.
+	pub fn get_directory(&self) -> &Path {
 		&self.directory
 	}
-
+	/// Returns a reference to the info of the pack.
 	pub fn get_info(&self) -> &PackInfo {
 		&self.info
 	}
-
+	/// Returns a reference to the config of the pack.
 	pub fn get_config(&self) -> &PackConfig {
 		&self.config
 	}
-
+	/// Returns the name of the pack.
 	pub fn get_pack_name(&self) -> &str {
 		&self.info.name
 	}
@@ -121,7 +141,7 @@ impl Default for PackConfig {
 		}
 	}
 }
-
+/// Normalizes the given pack name by removing invalid characters and trimming whitespace.
 pub fn norm_pack_name(set_name: String) -> String {
 	set_name
 		.split('/')
@@ -142,7 +162,7 @@ pub fn norm_pack_name(set_name: String) -> String {
 		})
 		.collect()
 }
-
+/// Creates a new pack with the given name in the given Igata directory path.
 pub fn create_new_pack(igata_dir_path: &Path, pack_name: String) {
 	let normed_pack_name = norm_pack_name(pack_name);
 	let set_dir_path = igata_dir_path.join(&normed_pack_name);
@@ -189,7 +209,7 @@ pub fn create_new_pack(igata_dir_path: &Path, pack_name: String) {
 
 	println!("finished {normed_pack_name} creation: {normed_pack_name}の作成を完了しました");
 }
-
+/// Reads the pack info from the given pack directory path, if the pack info file exists.
 pub fn read_pack_info(pack_dir: &Path) -> Option<PackInfo> {
 	let info_path = pack_dir.join("pack_info.ron");
 	match open_file_with_read_mode(&info_path) {
@@ -198,6 +218,7 @@ pub fn read_pack_info(pack_dir: &Path) -> Option<PackInfo> {
 	}
 }
 
+/// Reads the pack config from the given pack directory path, if the pack config file exists.
 pub fn read_pack_config(pack_dir: &Path) -> Option<PackConfig> {
 	let config_path = pack_dir.join("pack_config.ron");
 	match open_file_with_read_mode(&config_path) {
@@ -205,13 +226,15 @@ pub fn read_pack_config(pack_dir: &Path) -> Option<PackConfig> {
 		Err(_) => None,
 	}
 }
-
+/// Reads the pack settings (info and config) from the given pack directory path, if both files exist.
 pub fn read_pack_settings(pack_dir: &Path) -> Option<PackProperties> {
 	let info = read_pack_info(pack_dir)?;
 	let config = read_pack_config(pack_dir)?;
 	Some(PackProperties::new(info, config, pack_dir.to_path_buf()))
 }
 
+/// Gets the packs from the given pack names and Igata directory path.
+/// No duplicate checking is performed.
 /// 指定されたpack名リストにあるpackを読み込む
 /// pack名の重複チェックは行わない、重複削除してある場合がおそらく一番効率がいい
 pub fn get_packs_from_names(
