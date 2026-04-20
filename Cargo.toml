@@ -10,8 +10,8 @@ repository = "https://github.com/suquiya/nibi"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cliclack = "0.5.2"
-combu = { version = "1.6.0", features = ["vector_serde"] }
+cliclack = "0.5.4"
+combu = { version = "1.6.1", features = ["vector_serde"] }
 exrs = { version = "1.2.0", features = ["cmd"] }
 hcl-rs = "0.19.7"
 jiff = "0.2.23"

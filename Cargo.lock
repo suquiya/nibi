@@ -25,9 +25,9 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
 name = "cliclack"
-version = "0.5.2"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fd870c423d925f0257dda3ce62067e2e3b64b0e1ad29bac8affdd4b6ce938bd"
+checksum = "4529f45438fc25ca048b242d5c48e2d3ce9a521e2a5a9123d9737d8520b030dd"
 dependencies = [
  "console",
  "indicatif",
@@ -39,9 +39,9 @@ dependencies = [
 
 [[package]]
 name = "combu"
-version = "1.6.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a44304102b03a2ca0915be781aae55bf172d0e7b6cc7a0553f95a88b963badc"
+checksum = "006e7683862866556c08065ff7d0aaeb288977725d32111c4b1a283777b5b316"
 dependencies = [
  "serde",
 ]
