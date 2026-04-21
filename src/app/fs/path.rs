@@ -1,4 +1,5 @@
 use std::{
+	collections::BTreeMap,
 	env::current_dir,
 	path::{self, Path, PathBuf},
 };
@@ -21,8 +22,11 @@ pub fn get_abs_path_from_option<T: Into<PathBuf>>(path_str: Option<T>) -> PathBu
 }
 
 /// Returns the file name of the given path.
-pub fn file_name(path: &Path) -> String {
-	path.file_name().unwrap().to_str().unwrap().to_string()
+pub fn file_name(path: &Path) -> Option<String> {
+	path
+		.file_name()
+		.and_then(|n| n.to_str())
+		.map(|s| s.to_string())
 }
 
 /// Returns the directory path of the given path as a string.
@@ -48,4 +52,15 @@ pub fn to_parent_path(path: PathBuf) -> PathBuf {
 /// Returns the parent path of the given path after resolve to an absolute path.
 pub fn to_parent_abs_path(path: PathBuf) -> PathBuf {
 	to_parent_path(path).canonicalize().unwrap()
+}
+
+/// Returns a map of file names to paths from the given vector of paths.
+pub fn to_path_map(path: Vec<PathBuf>) -> BTreeMap<String, PathBuf> {
+	let mut map = BTreeMap::new();
+	for p in path {
+		if let Some(name) = file_name(&p) {
+			map.insert(name, p);
+		}
+	}
+	map
 }

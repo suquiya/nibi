@@ -270,7 +270,7 @@ fn prompt_init_config(init_config: &mut InitConfig) {
 		"input your project information for initialization.: 初期化のためのプロジェクト情報を入力してください。"
 	);
 	if init_config.project_name.is_none() {
-		let dir_path = file_name(&init_config.dir_path);
+		let dir_path = file_name(&init_config.dir_path).unwrap_or_default();
 		let project_name = inquiry_str("project name", &dir_path);
 		init_config.project_name = Some(project_name);
 	};
@@ -303,7 +303,7 @@ fn prompt_init_config(init_config: &mut InitConfig) {
 fn get_config_from_init_config(init_config: &InitConfig) -> Config {
 	let project_name = match &init_config.project_name {
 		Some(pn) => pn.clone(),
-		None => file_name(&init_config.dir_path),
+		None => file_name(&init_config.dir_path).unwrap(),
 	};
 	let site_name = match &init_config.site_name {
 		Some(sn) => sn.clone(),

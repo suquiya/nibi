@@ -24,3 +24,6 @@ serde_json = "1.0.149"
 strum = { version = "0.28.0", features = ["derive"] }
 toml = "1.1.2"
 walkdir = "2.5.0"
+
+[lints.clippy]
+doc_markdown = "warn"

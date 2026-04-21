@@ -1,5 +1,5 @@
 use std::{
-	collections::{BTreeMap, HashSet},
+	collections::{BTreeMap, BTreeSet},
 	fs,
 	path::{Path, PathBuf},
 };
@@ -8,8 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::{
 	fs::{
+		get_child_dirs,
 		io::{open_file_with_overwrite_mode, open_file_with_read_mode},
-		path::append_ext,
+		path::{append_ext, to_path_map},
 	},
 	serde::{FileType, read_deserialized_value, write_serialized_string_all},
 };
@@ -243,9 +244,10 @@ pub fn get_packs_from_names(
 ) -> BTreeMap<String, PackProperties> {
 	// 探す途中で読みだしたpackのデータをキャッシュ
 	let mut pack_name_cache: BTreeMap<String, PackProperties> = BTreeMap::new();
-	let mut readed_paths: HashSet<PathBuf> = HashSet::new();
+	let mut readed_dir_names: BTreeSet<String> = BTreeSet::new();
 	// レシピで指定されたpackのデータを格納
 	let mut packs = BTreeMap::<String, PackProperties>::new();
+	let mut rest_child_dir_map: Option<BTreeMap<String, PathBuf>> = None;
 
 	// 鋳型パックのディレクトリ
 	for pack_name in pack_names {
@@ -258,12 +260,43 @@ pub fn get_packs_from_names(
 		if let Some(pack_properties) = read_pack_settings(&pack_name_dir) {
 			let r_pack_name = pack_properties.get_pack_name();
 			pack_name_cache.insert(pack_name.clone(), pack_properties.clone());
-			readed_paths.insert(pack_name_dir);
+			readed_dir_names.insert(pack_name.to_owned());
 			if pack_name == r_pack_name {
 				packs.insert(pack_name.clone(), pack_properties);
 			}
 		} else {
 			// 見つからない／エラーが起きた場合、他のディレクトリを漁る
+			// ここで初めて子ディレクトリの一覧を取得して代入
+			if rest_child_dir_map.is_none() {
+				match get_child_dirs(igata_packs_dir) {
+					Ok(entries) => rest_child_dir_map = Some(to_path_map(entries)),
+					Err(_) => {
+						// ここまで来てエラーであればcontinue
+						continue;
+					}
+				}
+			}
+			// 構造的にここにNoneはこない
+			let child_map = rest_child_dir_map.as_mut().unwrap();
+			let keys = child_map.keys().cloned().collect::<Vec<_>>();
+			for key in keys {
+				if readed_dir_names.contains(&key) {
+					child_map.remove(&key);
+					continue;
+				}
+				// unwrapできるはずなので、できない場合はpanic直行でよい
+				let path = child_map.remove(&key).unwrap();
+				if let Some(pack_properties) = read_pack_settings(&path) {
+					let r_pack_name = pack_properties.get_pack_name();
+					pack_name_cache.insert(r_pack_name.to_owned(), pack_properties.clone());
+					if pack_name == r_pack_name {
+						packs.insert(pack_name.clone(), pack_properties);
+					}
+				}
+				// パック設定があってもなくても読んだのでchild_mapから削除し、読んだ一覧に入れる
+				child_map.remove(&key);
+				readed_dir_names.insert(key);
+			}
 		}
 	}
 
