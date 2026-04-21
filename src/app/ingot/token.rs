@@ -176,7 +176,7 @@ pub enum BlockToken {
 	QuotedString(Quote, String),
 	/// Token for unquoted strings.
 	UnquotedString(String),
-	/// Token for TokenNode array.
+	/// Token for `TokenNode` array.
 	Array(Vec<TokenNode>),
 	/// Token for maps.
 	Map(BTreeMap<String, TokenNode>),

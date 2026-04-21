@@ -30,7 +30,7 @@ impl Pos {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-/// TokenNode struct represents a token node in the AST.
+/// `TokenNode` struct represents a token node in the AST.
 /// It contains the position of the token in the source code and the token itself.
 pub struct TokenNode {
 	/// The position of the token in the source code.

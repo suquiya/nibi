@@ -60,7 +60,7 @@ pub fn build(config: Config, proj_path: &Path) {
 	};
 
 	// 必要なpackのデータを読み込んでおく
-	let packs = get_packs_from_names(
+	let _packs = get_packs_from_names(
 		recipe.get_pack_names(),
 		&config.get_dir_conf().get_igata_path(proj_path),
 	);

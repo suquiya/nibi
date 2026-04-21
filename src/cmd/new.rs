@@ -27,7 +27,7 @@ pub fn threed_cmd() -> Command {
 	)
 }
 
-/// Returns the [new igata_pack] command for the Nibi CLI.
+/// Returns the [new `igata_pack`] command for the Nibi CLI.
 pub fn new_igt_pack_cmd() -> Command {
 	Command::with_all_field(
 		"igata_pack".to_owned(),
@@ -73,7 +73,7 @@ fn new_igt_pack_alias() -> Vec<String> {
 	]
 }
 
-/// The action for the [new igata_pack] command.
+/// The action for the [new `igata_pack`] command.
 pub fn new_igt_pack_action(_cmd: Command, ctx: Context) -> action_result!() {
 	if let Some(igata_pack_name) = ctx.args.front() {
 		let proj_dir = get_proj_dir_from_context(&ctx);
