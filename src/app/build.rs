@@ -1,15 +1,9 @@
-use std::{
-	collections::BTreeMap,
-	path::{Path, PathBuf},
-};
-
-use walkdir::WalkDir;
+use std::path::Path;
 
 use crate::app::{
 	category::{get_categories_from_dir_path, get_index_map_from_categories},
-	fs::io::open_file_with_read_mode,
 	igata::pack::get_packs_from_names,
-	ingot::Ingot,
+	ingot::ingot::get_ingots_from_dir_and_collate_id_maps,
 	recipe::read_recipe,
 	tag::get_index_map_from_tags,
 };
@@ -26,38 +20,14 @@ pub fn build(config: Config, proj_path: &Path) {
 
 	let tags: Vec<Tag> = get_tags_from_dir_path(&zairyo_dir).unwrap_or_default();
 
-	let mut ingots: BTreeMap<usize, (PathBuf, Ingot)> = BTreeMap::new();
+	let categories_index_map = get_index_map_from_categories(&categories);
+	let tags_index_map = get_index_map_from_tags(&tags);
 
-	let index_categories_map = get_index_map_from_categories(&categories);
-	let index_tags_map = get_index_map_from_tags(&tags);
-
-	for entry in WalkDir::new(zairyo_dir)
-		.into_iter()
-		.filter_map(|e| e.ok())
-		.filter(|e| e.file_type().is_file() && e.file_name().to_string_lossy().ends_with(".ingot"))
-	{
-		let reader = open_file_with_read_mode(entry.path()).unwrap();
-		match Ingot::read(reader) {
-			Ok(mut ingot) => {
-				// ingotのカテゴリとタグを照合
-				ingot.collate_ids(&index_categories_map, &index_tags_map);
-
-				ingots.insert(ingot.id, (entry.path().to_path_buf(), ingot));
-			}
-			Err(e) => {
-				println!("{}: {}", entry.path().display(), e);
-			}
-		}
-	}
+	let ingots =
+		get_ingots_from_dir_and_collate_id_maps(&zairyo_dir, &categories_index_map, &tags_index_map);
 
 	// レシピを読む
-	let recipe = match read_recipe(&config, proj_path) {
-		Ok(recipe) => recipe,
-		Err(e) => {
-			println!("Failed to read recipe: {}", e);
-			return;
-		}
-	};
+	let recipe = read_recipe(&config, proj_path).unwrap();
 
 	// 必要なpackのデータを読み込んでおく
 	let _packs = get_packs_from_names(

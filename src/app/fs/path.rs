@@ -3,6 +3,8 @@ use std::{
 	env::current_dir,
 	path::{self, Path, PathBuf},
 };
+
+use walkdir::{DirEntry, WalkDir};
 /// Returns the absolute path of the given path string.
 pub fn get_abs_path<T: Into<PathBuf>>(path_str: T) -> PathBuf {
 	let path: PathBuf = path_str.into();
@@ -63,4 +65,21 @@ pub fn to_path_map(path: Vec<PathBuf>) -> BTreeMap<String, PathBuf> {
 		}
 	}
 	map
+}
+
+/// Returns a vector of paths for the child directories of the given directory.
+pub fn get_child_dirs(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
+	dir.read_dir().map(|entries| {
+		entries
+			.filter_map(|entry| {
+				let path = entry.ok()?.path();
+				if path.is_dir() { Some(path) } else { None }
+			})
+			.collect()
+	})
+}
+
+/// Returns an iterator of `DirEntry` for the all paths in the given directory.
+pub fn iter_all_paths(root: &Path) -> impl Iterator<Item = DirEntry> {
+	WalkDir::new(root).into_iter().filter_map(|e| e.ok())
 }

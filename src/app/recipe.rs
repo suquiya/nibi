@@ -175,7 +175,7 @@ pub fn read_recipe(config: &Config, proj_dir_path: &Path) -> DeResult<Recipe> {
 		Ok(file) => read_deserialized_value(file, FileType::Ron)
 			.map(|settings: RecipeSettings| Recipe::new(config, settings)),
 		Err(e) => {
-			println!("failed to read recipe file: レシピファイルの読み込みに失敗しました - {e}");
+			println!("Failed to read recipe file: レシピファイルの読み込みに失敗しました - {e}");
 			Err(DeError::IO(e))
 		}
 	}

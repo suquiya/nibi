@@ -10,6 +10,8 @@ pub mod fs;
 pub mod igata;
 /// ingot module
 pub mod ingot;
+/// raw_token module
+pub mod raw_token;
 /// recipe module
 pub mod recipe;
 /// serde module

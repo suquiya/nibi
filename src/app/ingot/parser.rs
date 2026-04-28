@@ -4,16 +4,17 @@ use jiff::Timestamp;
 
 use crate::app::{
 	fs::io::read_all_from_reader,
-	ingot::ingot::{RKeyList, To},
+	ingot::{
+		block_token::BlockToken,
+		ingot::{RKeyList, To},
+	},
+	raw_token::{
+		token::{Bracket, BracketRole, CommentMark, Quote, RawToken, RawTokenData, Sep},
+		tokenizer::RawTokenizer,
+	},
 };
 
-use super::{
-	Ingot,
-	error::ParseError,
-	token::{BlockToken, Bracket, BracketRole, CommentMark, Quote, RawToken, RawTokenData, Sep},
-	token_node::TokenNode,
-	tokenizer::IngotTokenizer,
-};
+use super::{Ingot, error::ParseError, token_node::TokenNode};
 
 #[derive(Debug)]
 /// Parses an `Ingot` from a reader.
@@ -153,7 +154,7 @@ impl IngotParser {
 		let buffer = read_all_from_reader(reader).map_err(ParseError::IO)?;
 
 		let mut result = Ingot::default();
-		let mut tokenizer = IngotTokenizer::new(buffer.chars().collect());
+		let mut tokenizer = RawTokenizer::new(buffer.chars().collect());
 
 		// フロントマターを分離する
 		let mut front_matter_tokens: Vec<RawTokenData> = Vec::new();
@@ -188,7 +189,7 @@ impl IngotParser {
 
 		let (mut content, back_matter) = IngotParser::split_back_matter(buffer);
 
-		tokenizer = IngotTokenizer::new(back_matter);
+		tokenizer = RawTokenizer::new(back_matter);
 
 		let mut back_matter_tokens: Vec<RawTokenData> = Vec::new();
 
@@ -480,7 +481,7 @@ mod tests {
 	use super::*;
 
 	fn tokenize_all(input: &str) -> Vec<RawTokenData> {
-		let mut tokenizer = IngotTokenizer::new(input.chars().collect());
+		let mut tokenizer = RawTokenizer::new(input.chars().collect());
 		let mut tokens: Vec<RawTokenData> = Vec::new();
 		loop {
 			let next_token = tokenizer.next_raw_token();

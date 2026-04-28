@@ -1,4 +1,4 @@
-use super::token::BlockToken;
+use super::block_token::BlockToken;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Represents the position of a token in the source code.

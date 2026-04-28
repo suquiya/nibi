@@ -4,7 +4,7 @@ use super::token::{
 
 #[derive(Debug)]
 /// Tokenizer for the ingot format.
-pub struct IngotTokenizer {
+pub struct RawTokenizer {
 	chars: Vec<char>,
 	/// Current position of cursor in chars.
 	pub pos: usize,
@@ -12,10 +12,10 @@ pub struct IngotTokenizer {
 
 const SYMBOL_CHARS: &str = "{}[]()<>,;: \t\n\r\"'/";
 
-impl IngotTokenizer {
+impl RawTokenizer {
 	/// constructor
-	pub fn new(chars: Vec<char>) -> IngotTokenizer {
-		IngotTokenizer { chars, pos: 0 }
+	pub fn new(chars: Vec<char>) -> Self {
+		Self { chars, pos: 0 }
 	}
 
 	/// returns next char
@@ -198,13 +198,12 @@ impl IngotTokenizer {
 
 #[cfg(test)]
 mod tests {
-	use crate::app::ingot::token::BracketType;
 
 	use super::*;
 
 	#[test]
 	fn test_raw_tokenize_basic() {
-		let mut tokenizer = IngotTokenizer::new("aaa:bbb".chars().collect());
+		let mut tokenizer = RawTokenizer::new("aaa:bbb".chars().collect());
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 0);
 		assert_eq!(token, RawToken::SimpleString("aaa".to_string()));
@@ -218,7 +217,7 @@ mod tests {
 
 	#[test]
 	fn test_raw_tokenize_bracket() {
-		let mut tokenizer = IngotTokenizer::new("aaa: {bbb: ccc}".chars().collect());
+		let mut tokenizer = RawTokenizer::new("aaa: {bbb: ccc}".chars().collect());
 		let (pos, token) = tokenizer.next_raw_token();
 		assert_eq!(pos, 0);
 		assert_eq!(token, RawToken::SimpleString("aaa".to_string()));

@@ -8,9 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::{
 	fs::{
-		get_child_dirs,
 		io::{open_file_with_overwrite_mode, open_file_with_read_mode},
-		path::{append_ext, to_path_map},
+		path::{append_ext, get_child_dirs, to_path_map},
 	},
 	serde::{FileType, read_deserialized_value, write_serialized_string_all},
 };

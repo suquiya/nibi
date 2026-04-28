@@ -1,8 +1,16 @@
-use std::{collections::BTreeMap, path::PathBuf, str::FromStr};
+use std::{
+	collections::BTreeMap,
+	path::{Path, PathBuf},
+	str::FromStr,
+};
 
 use jiff::Timestamp;
 
-use crate::app::{category::Category, tag::Tag};
+use crate::app::{
+	category::Category,
+	fs::{io::open_file_with_read_mode, path::iter_all_paths},
+	tag::Tag,
+};
 
 use super::{error::ParseError, parser::IngotParser};
 
@@ -199,6 +207,7 @@ impl Ingot {
 	pub fn read<R: std::io::Read>(reader: R) -> Result<Ingot, ParseError> {
 		IngotParser::parse(reader)
 	}
+
 	/// Collates the IDs of the categories and tags in the `Ingot`.
 	pub fn collate_ids(
 		&mut self,
@@ -252,4 +261,42 @@ impl Ingot {
 			)
 		}
 	}
+}
+
+/// Reads an ingot from a file and collates its category and tag IDs using the provided index maps.
+pub fn get_ingot_from_path_and_collate_id_maps(
+	path: &Path,
+	categories_index_map: &BTreeMap<usize, &Category>,
+	tags_index_map: &BTreeMap<usize, &Tag>,
+) -> Result<Ingot, ParseError> {
+	let reader = open_file_with_read_mode(path).map_err(ParseError::IO)?;
+	Ingot::read(reader).map(|mut ingot| {
+		ingot.collate_ids(categories_index_map, tags_index_map);
+		ingot
+	})
+}
+
+/// Gets `BTreeMap<usize, (PathBuf, Ingot)>` from a directory path and collates its category and tag IDs using the provided index maps.
+pub fn get_ingots_from_dir_and_collate_id_maps(
+	root: &Path,
+	categories_index_map: &BTreeMap<usize, &Category>,
+	tags_index_map: &BTreeMap<usize, &Tag>,
+) -> BTreeMap<usize, (PathBuf, Ingot)> {
+	let mut ingots: BTreeMap<usize, (PathBuf, Ingot)> = BTreeMap::new();
+	for entry in iter_all_paths(root)
+		.filter(|e| e.file_type().is_file() && e.file_name().to_string_lossy().ends_with(".ingot"))
+	{
+		let reader = open_file_with_read_mode(entry.path()).unwrap();
+		match Ingot::read(reader) {
+			Ok(mut ingot) => {
+				// ingotのカテゴリとタグを照合
+				ingot.collate_ids(categories_index_map, tags_index_map);
+				ingots.insert(ingot.id, (entry.path().to_path_buf(), ingot));
+			}
+			Err(e) => {
+				println!("{}: {}", entry.path().display(), e);
+			}
+		}
+	}
+	ingots
 }
