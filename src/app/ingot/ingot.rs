@@ -8,7 +8,10 @@ use jiff::Timestamp;
 
 use crate::app::{
 	category::Category,
-	fs::{io::open_file_with_read_mode, path::iter_all_paths},
+	fs::{
+		io::open_file_with_read_mode,
+		path::{is_file_ends_with, iter_all_paths},
+	},
 	tag::Tag,
 };
 
@@ -283,9 +286,8 @@ pub fn get_ingots_from_dir_and_collate_id_maps(
 	tags_index_map: &BTreeMap<usize, &Tag>,
 ) -> BTreeMap<usize, (PathBuf, Ingot)> {
 	let mut ingots: BTreeMap<usize, (PathBuf, Ingot)> = BTreeMap::new();
-	for entry in iter_all_paths(root)
-		.filter(|e| e.file_type().is_file() && e.file_name().to_string_lossy().ends_with(".ingot"))
-	{
+	let ext = ".ingot";
+	for entry in iter_all_paths(root).filter(|e| is_file_ends_with(e, ext)) {
 		let reader = open_file_with_read_mode(entry.path()).unwrap();
 		match Ingot::read(reader) {
 			Ok(mut ingot) => {

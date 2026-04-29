@@ -83,3 +83,18 @@ pub fn get_child_dirs(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
 pub fn iter_all_paths(root: &Path) -> impl Iterator<Item = DirEntry> {
 	WalkDir::new(root).into_iter().filter_map(|e| e.ok())
 }
+
+/// Returns true if `DirEntry` is a directory.
+pub fn is_dir(entry: &DirEntry) -> bool {
+	entry.file_type().is_dir()
+}
+
+/// Returns true if `DirEntry` is a file.
+pub fn is_file(entry: &DirEntry) -> bool {
+	entry.file_type().is_file()
+}
+
+/// Returns true if file and ends with the given extension.
+pub fn is_file_ends_with(entry: &DirEntry, ext: &str) -> bool {
+	entry.file_type().is_file() && entry.file_name().to_string_lossy().ends_with(ext)
+}
