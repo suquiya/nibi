@@ -12,13 +12,33 @@ pub enum Sep {
 }
 
 impl Sep {
+	/// Returns the separator as a `str`.
+	pub fn as_str(&self) -> &str {
+		match self {
+			Sep::Comma => ",",
+			Sep::Colon => ":",
+			Sep::WhiteSpaces(s) => s.as_str(),
+			Sep::NewLine => "\n",
+		}
+	}
+
 	/// Returns the string representation of the separator.
-	pub fn get_as_string(&self) -> String {
+	pub fn as_string(&self) -> String {
 		match self {
 			Sep::Comma => ",".to_string(),
 			Sep::Colon => ":".to_string(),
 			Sep::WhiteSpaces(s) => s.clone(),
 			Sep::NewLine => "\n".to_string(),
+		}
+	}
+
+	/// Add the string representation of the separator to the given string.
+	pub fn add_to_string(&self, s: &mut String) {
+		match self {
+			Sep::Comma => s.push(','),
+			Sep::Colon => s.push(':'),
+			Sep::WhiteSpaces(sep) => s.push_str(sep),
+			Sep::NewLine => s.push('\n'),
 		}
 	}
 }
@@ -70,7 +90,7 @@ impl Bracket {
 		}
 	}
 	/// Returns the character representation of the bracket.
-	pub fn get_as_char(&self) -> char {
+	pub fn as_char(&self) -> char {
 		match (&self.role, &self.bracket_type) {
 			(BracketRole::Start, BracketType::Curly) => '{',
 			(BracketRole::End, BracketType::Curly) => '}',
@@ -82,6 +102,12 @@ impl Bracket {
 			(BracketRole::End, BracketType::Normal) => ')',
 		}
 	}
+
+	/// Add the string representation of the bracket to the given string.
+	pub fn add_to_string(&self, s: &mut String) {
+		s.push(self.as_char());
+	}
+
 	/// Returns the role of the bracket (start or end).
 	pub fn get_role(&self) -> &BracketRole {
 		&self.role
@@ -103,11 +129,16 @@ pub enum Quote {
 
 impl Quote {
 	/// Returns the quote character as a `char`.
-	pub fn get_as_char(&self) -> char {
+	pub fn as_char(&self) -> char {
 		match self {
 			Quote::Single => '\'',
 			Quote::Double => '"',
 		}
+	}
+
+	/// Add the string representation of the quote to the given string.
+	pub fn add_to_string(&self, s: &mut String) {
+		s.push(self.as_char());
 	}
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,13 +153,23 @@ pub enum CommentMark {
 }
 
 impl CommentMark {
-	/// Returns the comment mark as a `String`.
-	pub fn get_as_string(&self) -> String {
+	/// Returns the comment mark as a `str`.
+	pub fn as_str(&self) -> &str {
 		match self {
-			CommentMark::LineBegin => "//".to_string(),
-			CommentMark::BlockBegin => "/*".to_string(),
-			CommentMark::BlockEnd => "*/".to_string(),
+			CommentMark::LineBegin => "//",
+			CommentMark::BlockBegin => "/*",
+			CommentMark::BlockEnd => "*/",
 		}
+	}
+
+	/// Returns the comment mark as a `String`.
+	pub fn as_string(&self) -> String {
+		self.as_str().to_string()
+	}
+
+	/// Add the string representation of the comment mark to the given string.
+	pub fn add_to_string(&self, s: &mut String) {
+		s.push_str(self.as_str());
 	}
 }
 
@@ -154,11 +195,23 @@ impl RawToken {
 	pub fn get_as_string(&self) -> String {
 		match self {
 			RawToken::SimpleString(s) => s.clone(),
-			RawToken::Quote(q) => q.get_as_char().to_string(),
-			RawToken::Sep(s) => s.get_as_string(),
-			RawToken::Bracket(bracket) => bracket.get_as_char().to_string(),
-			RawToken::Comment(mark) => mark.get_as_string(),
+			RawToken::Quote(q) => q.as_char().to_string(),
+			RawToken::Sep(s) => s.as_string(),
+			RawToken::Bracket(bracket) => bracket.as_char().to_string(),
+			RawToken::Comment(mark) => mark.as_string(),
 			RawToken::Eos => "".to_string(),
+		}
+	}
+
+	/// Appends the string representation of this token to the given string.
+	pub fn add_to_string(&self, dest: &mut String) {
+		match self {
+			RawToken::SimpleString(s) => dest.push_str(s),
+			RawToken::Quote(q) => q.add_to_string(dest),
+			RawToken::Sep(s) => s.add_to_string(dest),
+			RawToken::Bracket(bracket) => bracket.add_to_string(dest),
+			RawToken::Comment(mark) => mark.add_to_string(dest),
+			RawToken::Eos => {}
 		}
 	}
 }
