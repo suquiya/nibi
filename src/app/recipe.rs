@@ -11,6 +11,7 @@ use crate::app::{
 		io::{new_empty_file, open_file_with_read_mode},
 		path::append_ext,
 	},
+	ingot::ingot::To,
 	serde::{
 		DeError, DeResult, FileType, StrValOrArray, read_deserialized_value,
 		write_serialized_string_all,
@@ -24,6 +25,8 @@ pub struct Recipe {
 	pub igata_table: BTreeMap<String, String>,
 	/// Values for template rendering.
 	pub values: BTreeMap<String, String>,
+	/// Relative url format values.
+	pub url_formats: BTreeMap<To, String>,
 }
 /// Returns the default igata table.
 pub fn default_igata_table() -> BTreeMap<String, String> {
@@ -40,28 +43,52 @@ pub fn default_values(site_name: &str) -> BTreeMap<String, String> {
 	values
 }
 
+/// Returns the default url format.
+pub fn default_url_format() -> String {
+	String::from("{{category_with_slash}}{{url_path_name_with_slash}}")
+}
+
+/// Returns the default values of `url_formats` of `Recipe`.
+pub fn default_url_formats() -> BTreeMap<To, String> {
+	let mut url_formats = BTreeMap::new();
+	url_formats.insert(To::Post, default_url_format());
+	url_formats.insert(To::Page, default_url_format());
+	url_formats.insert(To::Top, default_url_format());
+	url_formats
+}
+
 impl Recipe {
 	/// Creates a new `Recipe` with all fields.
 	pub fn new_with_all_fields(
 		pack: Vec<String>,
 		igata_table: BTreeMap<String, String>,
 		values: BTreeMap<String, String>,
+		url_formats: BTreeMap<To, String>,
 	) -> Self {
 		Self {
 			pack,
 			igata_table,
 			values,
+			url_formats,
 		}
 	}
 
 	/// Creates a new `Recipe` with the given config and settings.
 	pub fn new(config: &Config, settings: RecipeSettings) -> Self {
-		let (pack, overrides) = settings.take_fields();
+		let (pack, overrides, url_formats) = settings.take_fields();
 		let mut igata_table = default_igata_table();
 		igata_table.extend(overrides.igata_table);
 		let mut values = default_values(config.site_name_ref());
 		values.extend(overrides.values);
-		Self::new_with_all_fields(pack, igata_table, values)
+		let url_formats = if let Some(url_formats) = url_formats {
+			let mut map = default_url_formats();
+			map.extend(url_formats);
+			map
+		} else {
+			default_url_formats()
+		};
+
+		Self::new_with_all_fields(pack, igata_table, values, url_formats)
 	}
 
 	/// Returns the pack names for this recipe.
@@ -95,14 +122,22 @@ pub struct RecipeSettings {
 	pub pack: StrValOrArray,
 	/// Overrides for the igata table and values.
 	pub overrides: Overrides,
+	/// URL formats for the recipe.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub url_formats: Option<BTreeMap<To, String>>,
 }
 
 impl RecipeSettings {
 	/// Creates a new `RecipeSettings` with the given pack and overrides.
-	pub fn new(pack: Vec<String>, overrides: Overrides) -> Self {
+	pub fn new(
+		pack: Vec<String>,
+		overrides: Overrides,
+		url_formats: Option<BTreeMap<To, String>>,
+	) -> Self {
 		Self {
 			pack: StrValOrArray(pack),
 			overrides,
+			url_formats,
 		}
 	}
 
@@ -127,9 +162,9 @@ impl RecipeSettings {
 	}
 
 	/// Takes ownership of both the pack names and overrides for this recipe.
-	pub fn take_fields(self) -> (Vec<String>, Overrides) {
-		let (pack, overrides) = (self.pack, self.overrides);
-		(pack.take_inner(), overrides)
+	pub fn take_fields(self) -> (Vec<String>, Overrides, Option<BTreeMap<To, String>>) {
+		let (pack, overrides, url_formats) = (self.pack, self.overrides, self.url_formats);
+		(pack.take_inner(), overrides, url_formats)
 	}
 }
 
@@ -159,7 +194,7 @@ pub fn create_new_recipe(proj_dir_path: &Path, recipe_name: String) {
 			);
 			let _ = write_serialized_string_all(
 				file,
-				&RecipeSettings::new(vec!["default".to_string()], Overrides::default()),
+				&RecipeSettings::new(vec!["default".to_string()], Overrides::default(), None),
 				FileType::Ron,
 			);
 		}

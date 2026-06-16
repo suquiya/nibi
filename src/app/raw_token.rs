@@ -1,4 +1,4 @@
-/// raw_token module
+/// module for raw token
 pub mod token;
-/// raw_tokenizer module
+/// tokenizer for raw token module
 pub mod tokenizer;

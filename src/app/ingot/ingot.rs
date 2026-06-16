@@ -5,6 +5,7 @@ use std::{
 };
 
 use jiff::Timestamp;
+use serde::{Deserialize, Serialize};
 
 use crate::app::{
 	category::Category,
@@ -134,7 +135,7 @@ impl FromStr for Status {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 /// Enum for the article(ingot) build type.
 pub enum To {
 	#[default]
@@ -287,17 +288,31 @@ pub fn get_ingots_from_dir_and_collate_id_maps(
 ) -> BTreeMap<usize, (PathBuf, Ingot)> {
 	let mut ingots: BTreeMap<usize, (PathBuf, Ingot)> = BTreeMap::new();
 	let ext = ".ingot";
+	let mut duplicate: Vec<(PathBuf, Ingot)> = Vec::new();
 	for entry in iter_all_paths(root).filter(|e| is_file_ends_with(e, ext)) {
 		let reader = open_file_with_read_mode(entry.path()).unwrap();
 		match Ingot::read(reader) {
 			Ok(mut ingot) => {
 				// ingotのカテゴリとタグを照合
 				ingot.collate_ids(categories_index_map, tags_index_map);
-				ingots.insert(ingot.id, (entry.path().to_path_buf(), ingot));
+				let value = ingots.insert(ingot.id, (entry.path().to_path_buf(), ingot));
+				if let Some(value) = value {
+					duplicate.push(value);
+				}
 			}
 			Err(e) => {
 				println!("{}: {}", entry.path().display(), e);
 			}
+		}
+	}
+
+	if !duplicate.is_empty() {
+		println!("Ingots have duplicate id are found: {}", duplicate.len());
+		let mut max_id: usize = *ingots.last_key_value().unwrap().0;
+		for (path, mut ingot) in duplicate.into_iter() {
+			max_id += 1;
+			ingot.id = max_id;
+			ingots.insert(max_id, (path, ingot));
 		}
 	}
 	ingots

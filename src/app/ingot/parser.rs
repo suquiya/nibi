@@ -138,7 +138,7 @@ impl IngotParser {
 					Err(_e) => (),
 				},
 				"path_url_name" | "path_name" | "url_path_name" | "post_url_name" | "page_url_name"
-				| "pname" => {
+				| "url_frag_name" | "pname" => {
 					let val = token.get_string_value_or_empty();
 					if !val.is_empty() {
 						result.pname = val;
