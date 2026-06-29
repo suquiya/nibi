@@ -1,3 +1,5 @@
+/// `raw_token` module
+pub mod basic_token;
 /// build module
 pub mod build;
 /// category module
@@ -10,8 +12,6 @@ pub mod fs;
 pub mod igata;
 /// ingot module
 pub mod ingot;
-/// `raw_token` module
-pub mod raw_token;
 /// recipe module
 pub mod recipe;
 /// serde module

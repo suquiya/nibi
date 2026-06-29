@@ -95,6 +95,8 @@ impl Default for RKeyList {
 impl From<String> for RKeyList {
 	fn from(value: String) -> Self {
 		let raw_keys = value
+			.trim()
+			.trim_matches(['"', '\''])
 			.split(',')
 			.collect::<Vec<_>>()
 			.iter_mut()

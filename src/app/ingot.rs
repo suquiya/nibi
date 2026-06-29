@@ -2,11 +2,11 @@
 /// ingot module
 pub mod ingot;
 pub use ingot::Ingot;
-/// `block_token` module
-pub mod block_token;
 /// error module
 pub mod error;
 /// parser module
 pub mod parser;
-/// `token_node` module
-pub mod token_node;
+/// `syntax_node` module
+pub mod syntax_node;
+/// `syntax_node_type` module
+pub mod syntax_node_type;
